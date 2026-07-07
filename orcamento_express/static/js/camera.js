@@ -25,7 +25,8 @@ document.getElementById('btn-processar').onclick = async () => {
     const resposta = await fetch('/api/processar_foto', {method: 'POST', body: dados});
     const r = await resposta.json();
     if (!r.ok) return avisar(r.erro || 'Erro ao processar a foto.', 'erro');
-    if (!r.folha_detectada)
+    if (r.foto_borrada) avisar('Foto borrada — abrindo em modo de conferência manual.', 'atencao');
+    else if (!r.folha_detectada)
       avisar('Não consegui detectar as bordas da folha; confira os itens com atenção.', 'atencao');
     location.href = r.proxima;
   } catch (e) {

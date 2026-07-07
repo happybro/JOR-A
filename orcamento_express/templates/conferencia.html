@@ -7,6 +7,16 @@
 <div class="aviso atencao">Confira os itens antes de gerar o PDF.
 Itens em amarelo precisam de conferência manual.</div>
 
+{% if rascunho.foto_borrada %}
+<div class="aviso erro">Esta foto ficou borrada — a leitura automática foi
+desativada para não arriscar erro. Todos os itens estão para marcação manual.
+Se quiser tentar de novo, volte e tire outra foto com mais luz e segurando firme.</div>
+{% elif rascunho.qualidade_baixa %}
+<div class="aviso atencao">Não consegui distinguir com confiança o que foi
+marcado nesta foto (pouco contraste entre os quadrados). Confira cada item
+com atenção antes de gerar o PDF.</div>
+{% endif %}
+
 {% if rascunho.imagem_processada %}
 <details class="cartao">
   <summary>Ver imagem processada</summary>

@@ -37,6 +37,22 @@ outras 35 peças, após calibrar o limiar de detecção (margem interna do
 quadrado de 15%→25%, necessária porque quadrados pequenos "vazavam" pixels
 da própria borda impressa para a leitura).
 
+**Atualização — detecção adaptativa por foto:** o limiar fixo inicial
+funcionava bem só na condição de luz/exposição usada para calibrá-lo. Como
+cada foto de celular varia (sombra, exposição automática, distância), a
+classificação de cada quadrado passou a comparar com a MEDIANA e o desvio
+robusto (MAD) da própria foto, em vez de um número fixo global — além de:
+- correção de iluminação desigual (achata sombra/gradiente de luz antes de binarizar);
+- detecção de foto borrada (variância do Laplaciano) — abaixo do mínimo, desativa a leitura automática e pede conferência manual;
+- salvaguarda contra "inventar" marcação em folha em branco (se a foto inteira não tem separação estatística confiável, tudo cai em conferência manual);
+- piso absoluto ainda vale para fichas com poucos itens (< 5 quadrados), onde a comparação estatística não é confiável.
+
+Testado com 6 cenários (luz uniforme, gradiente de luz, marca fraca de
+lápis, marca fraca + gradiente combinados, foto borrada, folha em branco) —
+100% de acerto nos casos com marcação real, e as duas salvaguardas (foto
+borrada / folha em branco) recusaram a leitura automática corretamente em
+vez de arriscar.
+
 ## 3. Arquitetura
 
 - **Flask** em porta própria (5055), acessível pelo celular na rede local.

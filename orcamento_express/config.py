@@ -107,10 +107,29 @@ UPLOAD_MAX_MB = int(os.environ.get("OE_UPLOAD_MAX_MB", "20"))
 # ---------------------------------------------------------------------------
 # Detecção de marcações na foto
 # ---------------------------------------------------------------------------
-# Fração de pixels escuros dentro do quadrado para considerar MARCADO
+# A classificação de cada quadrado é ADAPTATIVA por foto (compara com a
+# mediana/desvio da própria foto — ver services/image_processor.py), mas os
+# valores abaixo continuam servindo de piso/teto absolutos de segurança,
+# para uma folha totalmente em branco não "inventar" marcações em ruído.
+
+# Piso absoluto de preenchimento para considerar MARCADO (mesmo destacando
+# na própria foto, precisa passar deste mínimo também)
 DETECCAO_LIMIAR_MARCADO = float(os.environ.get("OE_LIMIAR_MARCADO", "0.18"))
-# Abaixo deste valor é considerado NÃO marcado; entre os dois = incerto
+# Teto absoluto abaixo do qual é sempre considerado vazio, não importa a foto
 DETECCAO_LIMIAR_VAZIO = float(os.environ.get("OE_LIMIAR_VAZIO", "0.07"))
+# Quantos desvios robustos (MAD) acima da mediana da foto já contam como
+# "se destaca" — mais alto = mais rigoroso (menos falsos positivos, mais
+# itens caem em conferência manual)
+DETECCAO_MAD_MULTIPLICADOR = float(os.environ.get("OE_MAD_MULTIPLICADOR", "4.0"))
+# Margem relativa mínima acima da mediana, usada quando o MAD é quase zero
+# (folha muito uniforme/limpa)
+DETECCAO_MARGEM_MINIMA = float(os.environ.get("OE_MARGEM_MINIMA", "0.05"))
+# Nitidez mínima (variância do Laplaciano) para confiar na leitura automática;
+# abaixo disso, a foto é considerada borrada e cai tudo em conferência manual
+DETECCAO_NITIDEZ_MINIMA = float(os.environ.get("OE_NITIDEZ_MINIMA", "40.0"))
+# Quantidade mínima de quadrados calibrados para confiar na comparação
+# relativa (mediana/MAD); fichas menores que isso usam só o piso absoluto
+DETECCAO_MINIMO_ITENS_PARA_COMPARACAO = int(os.environ.get("OE_MINIMO_ITENS_COMPARACAO", "5"))
 
 
 def garantir_pastas():

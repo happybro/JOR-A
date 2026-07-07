@@ -209,10 +209,14 @@ def criar_app():
         rascunho["imagem_processada"] = resultado["imagem_processada"]
         rascunho["folha_detectada"] = resultado["folha_detectada"]
         rascunho["ficha_calibrada"] = resultado["ficha_calibrada"]
+        rascunho["foto_borrada"] = resultado["foto_borrada"]
+        rascunho["qualidade_baixa"] = resultado["qualidade_baixa"]
         salvar_rascunho(rascunho)
         return jsonify({"ok": True, "proxima": url_for("conferencia"),
                         "folha_detectada": resultado["folha_detectada"],
-                        "ficha_calibrada": resultado["ficha_calibrada"]})
+                        "ficha_calibrada": resultado["ficha_calibrada"],
+                        "foto_borrada": resultado["foto_borrada"],
+                        "qualidade_baixa": resultado["qualidade_baixa"]})
 
     @app.post("/api/pular_foto")
     def api_pular_foto():
