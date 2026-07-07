@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Orçamento Express Oficina{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="topo">
+    <a href="{{ url_for('index') }}" class="topo-titulo">🔧 Orçamento Express</a>
+    {% block topo_extra %}{% endblock %}
+  </header>
+  <main class="conteudo">
+    <div id="aviso" class="aviso oculto"></div>
+    {% block conteudo %}{% endblock %}
+  </main>
+  <script>
+    // Exibe mensagem no topo: tipo = ok | atencao | erro | info
+    function avisar(texto, tipo) {
+      const el = document.getElementById('aviso');
+      el.textContent = texto;
+      el.className = 'aviso ' + (tipo || 'info');
+      el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+    async function postJSON(url, dados) {
+      const r = await fetch(url, {method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(dados || {})});
+      return r.json();
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

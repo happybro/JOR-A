@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titulo %}Calibração — {{ ficha.nome }}{% endblock %}
+{% block conteudo %}
+<h2>Calibração — {{ ficha.nome }}</h2>
+<p class="subtitulo">Envie uma foto/scan da ficha EM BRANCO (sem marcações), bem alinhada.
+Depois, para cada peça da lista, desenhe um retângulo sobre o quadrado de marcação dela na imagem.</p>
+
+<div class="cartao">
+  <input id="arquivo" type="file" accept="image/*">
+  <p id="status-imagem" class="subtitulo">Nenhuma imagem carregada ainda.</p>
+</div>
+
+<div id="area-calibracao" class="oculto">
+  <div class="cartao">
+    <p>Peça atual: <strong id="peca-atual">—</strong>
+      <span class="subtitulo">(<span id="progresso">0</span>/{{ ficha.itens|length }})</span></p>
+    <button id="btn-pular-item" class="botao botao-discreto">Pular esta peça</button>
+    <button id="btn-voltar-item" class="botao botao-discreto">Voltar uma peça</button>
+  </div>
+  <div class="canvas-envolucro">
+    <canvas id="canvas"></canvas>
+  </div>
+  <button id="btn-salvar" class="botao botao-confirmar botao-grande">💾 Salvar calibração</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TIPO = {{ tipo | tojson }};
+const ITENS = {{ ficha.itens | tojson }};
+const REF_LARGURA = {{ ficha.ref_largura }};
+const REF_ALTURA = {{ ficha.ref_altura }};
+</script>
+<script src="{{ url_for('static', filename='js/calibracao.js') }}"></script>
+{% endblock %}

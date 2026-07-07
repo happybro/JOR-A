@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Foto da Ficha{% endblock %}
+{% block conteudo %}
+<h2>Foto da ficha — {{ rascunho.tipo_ficha_nome or rascunho.tipo_ficha }}</h2>
+<p class="subtitulo">{{ rascunho.cm_tip }} {{ rascunho.numero or 'sem número' }} —
+  {{ rascunho.cliente or 'cliente não informado' }}</p>
+
+<div class="cartao centro">
+  <p class="subtitulo">Ainda não imprimiu a ficha para o mecânico marcar?</p>
+  <a class="botao botao-principal botao-grande"
+     href="{{ url_for('ficha_imprimir', tipo=rascunho.tipo_ficha) }}" target="_blank">
+     🖨️ Imprimir ficha para o mecânico marcar</a>
+</div>
+
+{% if not calibrada_manualmente %}
+<div class="aviso info">Esta ficha usa o layout gerado automaticamente pelo sistema
+(quadrados desenhados na posição certa a cada impressão). Use a ficha impressa
+pelo botão acima — uma cópia externa dessa mesma peça não vai bater com as coordenadas.</div>
+{% endif %}
+
+<div class="cartao centro">
+  <img id="previa" class="previa oculto" alt="Prévia da foto">
+  <p id="dica" class="subtitulo">Tire a foto da ficha já marcada pelo mecânico, com a
+  folha inteira visível, sobre fundo escuro, bem iluminada e sem sombra.</p>
+
+  <input id="arquivo-camera" type="file" accept="image/*" capture="environment" class="oculto">
+  <input id="arquivo-galeria" type="file" accept="image/*" class="oculto">
+
+  <button class="botao botao-principal botao-grande" onclick="document.getElementById('arquivo-camera').click()">📷 Abrir câmera</button>
+  <button class="botao botao-grande" onclick="document.getElementById('arquivo-galeria').click()">🖼️ Enviar da galeria</button>
+  <button id="btn-processar" class="botao botao-confirmar botao-grande oculto">⚙️ Processar foto</button>
+  <button id="btn-pular" class="botao botao-discreto">Seguir sem foto (marcar manualmente)</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+{% endblock %}

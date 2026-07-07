@@ -1,0 +1,17 @@
+# Orçamento Express Oficina — dependências
+flask>=3.0
+opencv-python-headless>=4.9
+numpy>=1.26
+reportlab>=4.0
+pillow>=10.0
+
+# Driver do banco Firebird do MecAuto (CICOM.CDB é Firebird 2.5):
+fdb>=2.0
+# Se algum dia o MecAuto for migrado para Firebird 3+, use no lugar:
+# firebird-driver>=1.10
+
+# Testes
+pytest>=8.0
+
+# Necessário só para gerar o executável (.exe) no Windows — veja gerar_executavel.bat
+# pyinstaller>=6.0

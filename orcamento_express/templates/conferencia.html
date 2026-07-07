@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titulo %}Conferência{% endblock %}
+{% block conteudo %}
+<h2>Conferência</h2>
+<p class="subtitulo">{{ rascunho.cm_tip }} {{ rascunho.numero or 'sem número' }} — {{ rascunho.cliente or '' }}
+ — {{ rascunho.tipo_ficha_nome or rascunho.tipo_ficha }}</p>
+<div class="aviso atencao">Confira os itens antes de gerar o PDF.
+Itens em amarelo precisam de conferência manual.</div>
+
+{% if rascunho.imagem_processada %}
+<details class="cartao">
+  <summary>Ver imagem processada</summary>
+  <img class="previa" src="{{ url_for('servir_processada', nome=rascunho.imagem_processada) }}"
+       alt="Ficha processada">
+</details>
+{% endif %}
+
+<div id="lista-itens"></div>
+
+<button id="btn-add" class="botao">➕ Adicionar peça manualmente</button>
+
+<div class="cartao">
+  <label class="rotulo" for="observacoes">Observações</label>
+  <textarea id="observacoes" class="campo" rows="3"
+    placeholder="Ex.: cliente traz o cabeçote retificado">{{ rascunho.observacoes or '' }}</textarea>
+</div>
+
+<button id="btn-gerar" class="botao botao-confirmar botao-grande">📄 Gerar PDF</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Itens vindos da detecção (ou lista completa da ficha, no modo manual)
+const ITENS = {{ rascunho.itens | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/conferencia.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Histórico{% endblock %}
+{% block conteudo %}
+<h2>Histórico de PDFs</h2>
+{% if not registros %}
+<p class="subtitulo">Nenhum PDF gerado ainda.</p>
+{% endif %}
+{% for r in registros %}
+<div class="cartao item-historico">
+  <div>
+    <strong>OS {{ r.numero_os or '—' }}</strong> — {{ r.cliente or 'sem cliente' }}<br>
+    <span class="subtitulo">{{ r.criado_em }} · {{ r.placa or '' }} {{ r.veiculo or '' }}
+      · Ficha: {{ r.tipo_ficha }}</span>
+  </div>
+  <a class="botao" href="{{ url_for('servir_pdf', nome=r.arquivo_pdf) }}" target="_blank">📄 Abrir PDF</a>
+</div>
+{% endfor %}
+<a class="botao botao-discreto" href="{{ url_for('index') }}">← Voltar ao início</a>
+{% endblock %}

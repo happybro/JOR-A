@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# Segredos e dados locais do Orçamento Express
+orcamento_express/.env
+orcamento_express/data/*.db
+orcamento_express/logs/*.log*
+orcamento_express/uploads/*
+orcamento_express/processed/*
+orcamento_express/pdfs/*
+!orcamento_express/uploads/.gitkeep
+!orcamento_express/processed/.gitkeep
+!orcamento_express/pdfs/.gitkeep
+
+# Relatório de inspeção pode conter nomes internos do banco — revisar antes de commitar
+orcamento_express/database/relatorio_inspecao.md

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}PDF Gerado{% endblock %}
+{% block conteudo %}
+<h2>✅ PDF gerado com sucesso</h2>
+<p class="subtitulo">OS {{ rascunho.numero or 'sem número' }} — {{ rascunho.cliente or '' }}</p>
+
+<a class="botao botao-confirmar botao-grande"
+   href="{{ url_for('servir_pdf', nome=rascunho.arquivo_pdf) }}" target="_blank">⬇️ Baixar / abrir PDF</a>
+<button id="btn-imprimir" class="botao botao-grande">🖨️ Imprimir</button>
+<button id="btn-whats" class="botao botao-grande">📋 Copiar mensagem para WhatsApp</button>
+<a class="botao botao-principal botao-grande" href="{{ url_for('novo_orcamento') }}">➕ Novo orçamento</a>
+<a class="botao botao-discreto" href="{{ url_for('historico_tela') }}">Ver histórico</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const URL_PDF = "{{ url_for('servir_pdf', nome=rascunho.arquivo_pdf) }}";
+const MENSAGEM = {{ (rascunho.mensagem_whatsapp or '') | tojson }};
+
+document.getElementById('btn-imprimir').onclick = () => {
+  const janela = window.open(URL_PDF, '_blank');
+  if (janela) janela.addEventListener('load', () => janela.print());
+};
+
+document.getElementById('btn-whats').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(MENSAGEM);
+    avisar('Mensagem copiada! Cole no grupo do WhatsApp e anexe o PDF.', 'ok');
+  } catch (e) {
+    prompt('Copie a mensagem abaixo:', MENSAGEM);
+  }
+};
+</script>
+{% endblock %}

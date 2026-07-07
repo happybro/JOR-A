@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titulo %}Novo Orçamento{% endblock %}
+{% block conteudo %}
+<h2>Novo orçamento</h2>
+{% if modo_demo %}
+<div class="aviso atencao">Modo DEMO ativo: a busca retorna dados fictícios.
+Configure o banco do MecAuto no arquivo .env para usar dados reais.</div>
+{% endif %}
+
+<label class="rotulo" for="numero">Número da OS / orçamento</label>
+<div class="linha">
+  <input id="numero" type="number" inputmode="numeric" placeholder="Ex.: 12345" class="campo campo-grande">
+  <button id="btn-buscar" class="botao botao-principal">🔍 Buscar no MecAuto</button>
+</div>
+
+<form id="dados" class="cartao" autocomplete="off">
+  <input type="hidden" name="cm_tip" value="OS">
+  <label class="rotulo">Cliente</label>
+  <input name="cliente" class="campo" placeholder="Nome do cliente">
+  <label class="rotulo">Placa</label>
+  <input name="placa" class="campo" placeholder="ABC1D23" style="text-transform:uppercase">
+  <label class="rotulo">Veículo</label>
+  <input name="veiculo" class="campo" placeholder="Marca / modelo / ano">
+  <label class="rotulo">Motor</label>
+  <input name="motor" class="campo" placeholder="Ex.: D13">
+  <label class="rotulo">Consultor</label>
+  <input name="consultor" class="campo" placeholder="Opcional">
+  <label class="rotulo">Data</label>
+  <input name="data" class="campo" placeholder="dd/mm/aaaa">
+</form>
+
+<h3>Tipo de ficha</h3>
+{% if not tipos %}
+<div class="aviso atencao">Nenhum modelo de ficha cadastrado ainda em
+  <code>ficha_templates/</code>.</div>
+{% endif %}
+<div class="opcoes-tipo">
+  {% for valor, nome in tipos.items() %}
+  <label class="opcao-tipo">
+    <input type="radio" name="tipo_ficha" value="{{ valor }}">
+    <span>{{ nome }}</span>
+  </label>
+  {% endfor %}
+</div>
+
+<button id="btn-continuar" class="botao botao-confirmar botao-grande">📷 Continuar para a foto</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('btn-buscar').onclick = async () => {
+  const numero = document.getElementById('numero').value.trim();
+  if (!numero) return avisar('Digite o número da OS/orçamento.', 'atencao');
+  avisar('Buscando no MecAuto...', 'info');
+  const d = await postJSON('/api/buscar_os', {numero});
+  if (!d.encontrado) return avisar(d.erro || 'Não encontrei essa OS no banco.', 'erro');
+  const f = document.getElementById('dados');
+  f.elements['cm_tip'].value = d.cm_tip || 'OS';
+  if (d.cliente) f.elements['cliente'].value = d.cliente;
+  if (d.placa) f.elements['placa'].value = d.placa;
+  if (d.veiculo_completo || d.veiculo) f.elements['veiculo'].value = d.veiculo_completo || d.veiculo;
+  if (d.motor) f.elements['motor'].value = d.motor;
+  if (d.data_entrada) f.elements['data'].value = d.data_entrada;
+  avisar(d.aviso ? 'Cliente encontrado (demo). ' + d.aviso : 'Cliente encontrado.', 'ok');
+};
+
+document.getElementById('btn-continuar').onclick = async () => {
+  const tipo = document.querySelector('input[name="tipo_ficha"]:checked');
+  if (!tipo) return avisar('Escolha o tipo de ficha.', 'atencao');
+  const f = document.getElementById('dados');
+  const d = await postJSON('/api/iniciar_orcamento', {
+    numero: document.getElementById('numero').value.trim(),
+    cm_tip: f.elements['cm_tip'].value,
+    cliente: f.elements['cliente'].value, placa: f.elements['placa'].value.toUpperCase(),
+    veiculo: f.elements['veiculo'].value, motor: f.elements['motor'].value,
+    consultor: f.elements['consultor'].value,
+    data: f.elements['data'].value, tipo_ficha: tipo.value});
+  if (d.ok) location.href = d.proxima; else avisar(d.erro, 'erro');
+};
+</script>
+{% endblock %}

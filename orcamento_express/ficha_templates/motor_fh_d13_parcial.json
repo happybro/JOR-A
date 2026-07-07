@@ -1,0 +1,420 @@
+{
+  "tipo": "motor_fh_d13_parcial",
+  "nome": "Motor FH D13 — Recondicionamento Parcial",
+  "titulo_impressao": "RELAÇÃO DE PEÇAS P/ RECONDICIONAMENTO PARCIAL DE MOTOR",
+  "fonte": "Planilha OR_AMENTO_MOTOR_FH_D13_PARCIAL_2026.xlsx (anexada pelo usuário)",
+  "ref_largura": 1000,
+  "ref_altura": 1414,
+  "itens": [
+    {
+      "peca": "CAMISA CILINDRO DO MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JOGO DE ANEIS DE CAMISA MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JOGO DE ANEIS DE PISTÃO",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JOGO DE BRONZINAS (MANCAL / BIELA / ARRUELAS DE ENCOSTO)",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ANEIS DO CANO BOMBA DE OLEO (ORIG.)",
+      "codigo_interno": "21092243",
+      "quantidade_padrao": 7,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ANEIS DO CANO PESCADOR (ORIG.)",
+      "codigo_interno": "22275838",
+      "quantidade_padrao": 2,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "BOMBA DE OLEO DO MOTOR FH D13",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JOGO DE ANEL VALVULA VCB / VEB",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ANEL CANO TUBO LATERAL",
+      "codigo_interno": "1547254",
+      "quantidade_padrao": 2,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ANEL VALVULA TERMOSTÁTICA",
+      "codigo_interno": "21503575",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ANEL CANO AGUA MOTOR",
+      "codigo_interno": "1547252",
+      "quantidade_padrao": 3,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JOGO DE ANEL UNIDADES INJETORAS",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTA DO CABEÇOTE MOTOR D13",
+      "codigo_interno": "20513037",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTA TAMPA DE VALVULAS D13",
+      "codigo_interno": "20538793",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTA DO CARTER DE OLEO D13",
+      "codigo_interno": "20541940",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTA ANEL COLETOR ADMISSÃO",
+      "codigo_interno": "20805850",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTA TUBO LATERAL AGUA",
+      "codigo_interno": "20479636",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "JUNTAS COLETOR DE ESCAPE D13",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "KIT JUNTA DA MESA TURBINA",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FRISO TRASEIRINHA MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "TIJOLINHO",
+      "codigo_interno": "",
+      "quantidade_padrao": 2,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT OLEO DO MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 33,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FILTRO LUBRIFICANTE OLEO MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 3,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FILTRO DE COMBUSTIVEL",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FILTRO RACOR SEPARADOR AGUA",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FILTRO DE AR DO MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "SILICONE 5900 LOCTITE (ORIG.) VOLVO",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT ADITIVO RADIADOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 20,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ARRUELAS DE COBRE 16MM",
+      "codigo_interno": "",
+      "quantidade_padrao": 5,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ABRACADEIRA DE NYLON ALTA TEMPERATURA",
+      "codigo_interno": "",
+      "quantidade_padrao": 6,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ABRACADEIRA DE NYLON MEDIA",
+      "codigo_interno": "",
+      "quantidade_padrao": 20,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "ABRACADEIRA DE NYLON PEQUENA",
+      "codigo_interno": "",
+      "quantidade_padrao": 20,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "GRAMPO FIXAR CHICOTE MOTOR",
+      "codigo_interno": "",
+      "quantidade_padrao": 4,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "PANOS DE LIMPEZA",
+      "codigo_interno": "",
+      "quantidade_padrao": 10,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT DE THINNER",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT QUEROSENE",
+      "codigo_interno": "",
+      "quantidade_padrao": 3,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT DE INTERCAP",
+      "codigo_interno": "",
+      "quantidade_padrao": 3,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "LT DE SOLUPAN",
+      "codigo_interno": "",
+      "quantidade_padrao": 3,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "FOLHA DE LIXA 80",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "RODE DE LIXA RETIFICA",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    },
+    {
+      "peca": "RODA ESCOVA RETIFICA",
+      "codigo_interno": "",
+      "quantidade_padrao": 1,
+      "grupo": "",
+      "x": null,
+      "y": null,
+      "w": null,
+      "h": null
+    }
+  ]
+}

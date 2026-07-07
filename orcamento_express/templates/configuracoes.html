@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Configurações{% endblock %}
+{% block conteudo %}
+<h2>Configurações</h2>
+
+<div class="cartao">
+  <h3>Servidor</h3>
+  <p>Porta: <strong>{{ porta }}</strong> (separada do MecAuto/JJSoft).<br>
+  Para mudar, edite <code>OE_PORTA</code> no arquivo <code>.env</code> e reinicie.</p>
+</div>
+
+<div class="cartao">
+  <h3>Banco MecAuto / CICOM (somente leitura)</h3>
+  {% if modo_demo %}
+  <p><span class="etiqueta atencao">MODO DEMO ativo</span> — a busca retorna dados fictícios.</p>
+  <p>Para usar o banco real: edite o <code>.env</code> (MECAUTO_DSN, usuário, senha),
+  coloque <code>MECAUTO_MODO_DEMO=false</code> e reinicie.</p>
+  {% elif not dsn_configurado %}
+  <p><span class="etiqueta erro">Banco não configurado</span> — defina MECAUTO_DSN no .env.</p>
+  {% else %}
+  <p><span class="etiqueta ok">Banco configurado</span> — todas as consultas são SELECT em transação somente leitura.</p>
+  {% endif %}
+</div>
+
+<div class="cartao">
+  <h3>Fichas de peças</h3>
+  <p class="subtitulo">Cada ficha usa quadrados de marcação gerados automaticamente
+  pelo próprio sistema (imprima pelo botão na tela de captura). Só é preciso
+  calibrar manualmente se a oficina quiser usar uma ficha impressa fora do sistema.</p>
+  {% for tipo, ficha in fichas.items() %}
+  <div class="linha linha-config">
+    <span>{{ ficha.nome }} ({{ ficha.itens|length }} peças)
+      {% if ficha.calibrada_manualmente %}<span class="etiqueta ok">calibrada manualmente</span>
+      {% else %}<span class="etiqueta">layout automático</span>{% endif %}
+    </span>
+    <a class="botao" href="{{ url_for('calibracao', tipo=tipo) }}">🎯 Calibrar manualmente</a>
+  </div>
+  {% endfor %}
+  {% if not fichas %}
+  <p class="subtitulo">Nenhuma ficha cadastrada em <code>ficha_templates/</code>.</p>
+  {% endif %}
+</div>
+<a class="botao botao-discreto" href="{{ url_for('index') }}">← Voltar ao início</a>
+{% endblock %}

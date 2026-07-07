@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="tela-inicial">
+  <h1>Orçamento Express Oficina</h1>
+  <p class="subtitulo">{{ oficina }}</p>
+  <a class="botao botao-principal botao-grande" href="{{ url_for('novo_orcamento') }}">➕ Gerar novo orçamento</a>
+  <a class="botao botao-grande" href="{{ url_for('historico_tela') }}">🗂️ Histórico</a>
+  <a class="botao botao-grande" href="{{ url_for('configuracoes') }}">⚙️ Configurações</a>
+</div>
+{% endblock %}
