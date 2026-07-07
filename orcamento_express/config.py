@@ -8,10 +8,24 @@ IMPORTANTE: este sistema NUNCA escreve no banco do MecAuto (CICOM.CDB).
 As credenciais abaixo são usadas apenas para consultas SELECT.
 """
 import os
+import shutil
+import sys
 from pathlib import Path
 
-# Diretório base do projeto (pasta orcamento_express/)
-BASE_DIR = Path(__file__).resolve().parent
+# Diretório dos recursos empacotados (templates, static, fichas padrão).
+# Quando rodando como .exe (PyInstaller onefile), isso aponta para a pasta
+# temporária onde o executável se extrai — correto para LER recursos
+# embutidos, mas essa pasta some quando o programa fecha.
+RECURSOS_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+
+# Diretório onde o sistema GRAVA dados (histórico, PDFs, fotos, logs).
+# Quando rodando como .exe, isso é a pasta onde o .exe está (persiste entre
+# execuções) — NUNCA a pasta temporária do PyInstaller, que é apagada ao
+# fechar o programa e faria o histórico "sumir" a cada reinício.
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 
 
 def _carregar_env():
@@ -100,7 +114,20 @@ DETECCAO_LIMIAR_VAZIO = float(os.environ.get("OE_LIMIAR_VAZIO", "0.07"))
 
 
 def garantir_pastas():
-    """Cria as pastas de trabalho se não existirem."""
+    """Cria as pastas de trabalho se não existirem.
+
+    Se as fichas padrão (embutidas no .exe) ainda não tiverem sido copiadas
+    para a pasta persistente ao lado do executável, copia-as agora — depois
+    disso, quem manda é a cópia persistente (o usuário pode editar/adicionar
+    fichas ali sem precisar gerar um novo .exe).
+    """
     for pasta in (PASTA_UPLOADS, PASTA_PROCESSADAS, PASTA_PDFS,
                   PASTA_LOGS, PASTA_FICHAS, BANCO_LOCAL.parent):
         pasta.mkdir(parents=True, exist_ok=True)
+
+    fichas_embutidas = RECURSOS_DIR / "ficha_templates"
+    if fichas_embutidas != PASTA_FICHAS and fichas_embutidas.exists():
+        for arquivo in fichas_embutidas.glob("*.json"):
+            destino = PASTA_FICHAS / arquivo.name
+            if not destino.exists():
+                shutil.copy2(arquivo, destino)

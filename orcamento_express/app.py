@@ -39,7 +39,9 @@ log = configurar_logs()
 
 
 def criar_app():
-    app = Flask(__name__)
+    app = Flask(__name__,
+               template_folder=str(config.RECURSOS_DIR / "templates"),
+               static_folder=str(config.RECURSOS_DIR / "static"))
     app.secret_key = config.SECRET_KEY
     app.config["MAX_CONTENT_LENGTH"] = config.UPLOAD_MAX_MB * 1024 * 1024
     historico = HistoricoLocal(config.BANCO_LOCAL)
