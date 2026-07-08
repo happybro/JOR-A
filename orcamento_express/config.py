@@ -107,29 +107,22 @@ UPLOAD_MAX_MB = int(os.environ.get("OE_UPLOAD_MAX_MB", "20"))
 # ---------------------------------------------------------------------------
 # Detecção de marcações na foto
 # ---------------------------------------------------------------------------
-# A classificação de cada quadrado é ADAPTATIVA por foto (compara com a
-# mediana/desvio da própria foto — ver services/image_processor.py), mas os
-# valores abaixo continuam servindo de piso/teto absolutos de segurança,
-# para uma folha totalmente em branco não "inventar" marcações em ruído.
+# Classificação conservadora por quadrado (ver services/image_processor.py):
+# um item só é marcado automaticamente com evidência FORTE — tinta suficiente
+# E formando um traço grande conectado (assinatura de caneta, não de ruído).
+# Qualquer dúvida fica desmarcada e sinalizada em amarelo para conferência.
 
-# Piso absoluto de preenchimento para considerar MARCADO (mesmo destacando
-# na própria foto, precisa passar deste mínimo também)
-DETECCAO_LIMIAR_MARCADO = float(os.environ.get("OE_LIMIAR_MARCADO", "0.18"))
-# Teto absoluto abaixo do qual é sempre considerado vazio, não importa a foto
-DETECCAO_LIMIAR_VAZIO = float(os.environ.get("OE_LIMIAR_VAZIO", "0.07"))
-# Quantos desvios robustos (MAD) acima da mediana da foto já contam como
-# "se destaca" — mais alto = mais rigoroso (menos falsos positivos, mais
-# itens caem em conferência manual)
-DETECCAO_MAD_MULTIPLICADOR = float(os.environ.get("OE_MAD_MULTIPLICADOR", "4.0"))
-# Margem relativa mínima acima da mediana, usada quando o MAD é quase zero
-# (folha muito uniforme/limpa)
-DETECCAO_MARGEM_MINIMA = float(os.environ.get("OE_MARGEM_MINIMA", "0.05"))
+# Fração mínima de tinta no miolo do quadrado para considerar MARCADO
+DETECCAO_LIMIAR_MARCADO = float(os.environ.get("OE_LIMIAR_MARCADO", "0.15"))
+# Fração mínima ocupada pela MAIOR mancha conectada de tinta (traço de
+# caneta) para considerar MARCADO — ruído vira manchinhas pequenas
+DETECCAO_LIMIAR_TRACO = float(os.environ.get("OE_LIMIAR_TRACO", "0.10"))
+# Acima disto (mas sem passar nos critérios de marcado), o item vira
+# "conferir" (desmarcado + destaque amarelo); abaixo, é vazio com confiança
+DETECCAO_LIMIAR_SUSPEITA = float(os.environ.get("OE_LIMIAR_SUSPEITA", "0.08"))
 # Nitidez mínima (variância do Laplaciano) para confiar na leitura automática;
 # abaixo disso, a foto é considerada borrada e cai tudo em conferência manual
 DETECCAO_NITIDEZ_MINIMA = float(os.environ.get("OE_NITIDEZ_MINIMA", "40.0"))
-# Quantidade mínima de quadrados calibrados para confiar na comparação
-# relativa (mediana/MAD); fichas menores que isso usam só o piso absoluto
-DETECCAO_MINIMO_ITENS_PARA_COMPARACAO = int(os.environ.get("OE_MINIMO_ITENS_COMPARACAO", "5"))
 
 
 def garantir_pastas():

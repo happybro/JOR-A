@@ -195,20 +195,22 @@ def test_foto_borrada_desativa_deteccao_automatica(tmp_path):
 
 
 def test_folha_em_branco_nao_inventa_marcacao(tmp_path):
-    """Se ninguém marcou nada, o sistema não pode "inventar" uma separação
-    estatística em puro ruído — precisa avisar e pedir conferência manual."""
+    """Se ninguém marcou nada, NENHUM item pode sair marcado — a classificação
+    é por evidência absoluta (tinta + traço conectado), então uma folha limpa
+    é lida com confiança como toda vazia, sem inventar marcação em ruído."""
     ficha = template_mapper.carregar_ficha("motor_fh_d13_parcial")
     folha = _folha_com_marcas(ficha, [])  # nenhuma marcação
     caminho = _compor_foto(tmp_path, folha, ficha["ref_largura"], ficha["ref_altura"], "branca.jpg")
     resultado = image_processor.processar_foto(caminho, ficha)
-    assert resultado["qualidade_baixa"] is True
     assert all(not it["marcado"] for it in resultado["itens"])
+    # e a maioria absoluta deve ser vazia com confiança (não "conferir")
+    conferir = [it for it in resultado["itens"] if it["status"] == "conferir"]
+    assert len(conferir) <= 3
 
 
 def test_ficha_curta_usa_piso_absoluto_em_vez_de_comparacao(tmp_path):
     """Com poucos quadrados (ex.: ficha de Diferencial com poucas peças), a
-    mediana/desvio da própria foto não é uma base confiável — o sistema usa
-    só o piso absoluto nesse caso."""
+    classificação absoluta por evidência continua funcionando normalmente."""
     ficha = {
         "tipo": "curta", "ref_largura": 1000, "ref_altura": 1414, "calibrada": True,
         "itens": [
@@ -223,3 +225,71 @@ def test_ficha_curta_usa_piso_absoluto_em_vez_de_comparacao(tmp_path):
     resultado = image_processor.processar_foto(caminho, ficha)
     marcados = [it["indice"] for it in resultado["itens"] if it["marcado"]]
     assert marcados == [1]
+
+
+# ---------------------------------------------------------------------------
+# Robustez de mundo real: papel curvado (snap local por quadrado), rabisco de
+# preenchimento, e a regra de nunca pré-marcar item duvidoso.
+# ---------------------------------------------------------------------------
+
+def test_papel_curvado_nao_gera_falso_positivo(tmp_path):
+    """Papel ondulado desloca os quadrados alguns pixels em relação ao
+    alinhamento global — sem o snap local, a borda impressa vaza pra dentro
+    da medição e vira falso positivo (o bug visto na foto real da oficina).
+
+    Simula desenhando os quadrados DESLOCADOS (+6px) da posição teórica:
+    o snap local tem que encontrá-los e ler tudo certo mesmo assim."""
+    ficha = template_mapper.carregar_ficha("motor_fh_d13_parcial")
+    ref_w, ref_h = ficha["ref_largura"], ficha["ref_altura"]
+    desloc = 6
+    folha = np.full((ref_h, ref_w, 3), 255, dtype=np.uint8)
+    for item in ficha["itens"]:
+        x, y = item["x"] + desloc, item["y"] + desloc
+        cv2.rectangle(folha, (x, y), (x + item["w"], y + item["h"]), (0, 0, 0), 2)
+    marcados_esperados = [3, 17, 29]
+    for i in marcados_esperados:
+        item = ficha["itens"][i]
+        x, y, w, h = item["x"] + desloc, item["y"] + desloc, item["w"], item["h"]
+        cv2.line(folha, (x + 3, y + 3), (x + w - 3, y + h - 3), (0, 0, 0), 3)
+        cv2.line(folha, (x + w - 3, y + 3), (x + 3, y + h - 3), (0, 0, 0), 3)
+
+    caminho = _compor_foto(tmp_path, folha, ref_w, ref_h, "curvado.jpg")
+    resultado = image_processor.processar_foto(caminho, ficha)
+    marcados = sorted(it["indice"] for it in resultado["itens"] if it["marcado"])
+    assert marcados == marcados_esperados
+
+
+def test_rabisco_de_preenchimento_e_detectado(tmp_path):
+    """O mecânico às vezes preenche/rabisca o quadrado em vez de fazer um X
+    (foi o caso da foto real) — precisa ser detectado do mesmo jeito."""
+    ficha = template_mapper.carregar_ficha("motor_fh_d13_parcial")
+    folha = _folha_com_marcas(ficha, [])
+    rng = np.random.RandomState(3)
+    item = ficha["itens"][27]
+    x, y, w, h = item["x"], item["y"], item["w"], item["h"]
+    pontos = [(x + 3 + rng.randint(0, max(1, w - 6)), y + 3 + rng.randint(0, max(1, h - 6)))
+              for _ in range(14)]
+    for a, b in zip(pontos[:-1], pontos[1:]):
+        cv2.line(folha, a, b, (120, 40, 30), 3)  # caneta azul (BGR)
+
+    caminho = _compor_foto(tmp_path, folha, ficha["ref_largura"], ficha["ref_altura"], "rabisco.jpg")
+    resultado = image_processor.processar_foto(caminho, ficha)
+    marcados = [it["indice"] for it in resultado["itens"] if it["marcado"]]
+    assert marcados == [27]
+
+
+def test_item_duvidoso_nunca_e_pre_marcado():
+    """Regra de ouro: dúvida NUNCA vira item marcado — fica desmarcada com
+    status 'conferir' para o usuário decidir na tela."""
+    # tinta acima do nível de suspeita, mas sem traço grande (ruído espalhado)
+    marcado, status = image_processor._classificar_marcacao(0.12, 0.03)
+    assert marcado is False
+    assert status == "conferir"
+    # evidência forte dos dois: marcado com confiança
+    marcado, status = image_processor._classificar_marcacao(0.40, 0.30)
+    assert marcado is True
+    assert status == "ok"
+    # limpo: vazio com confiança
+    marcado, status = image_processor._classificar_marcacao(0.02, 0.01)
+    assert marcado is False
+    assert status == "ok"

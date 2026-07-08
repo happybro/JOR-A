@@ -69,7 +69,9 @@ def calcular_layout_automatico(quantidade_itens: int, ref_largura: int, ref_altu
     col_largura = largura_util / 2
     altura_util = ref_altura - TOPO_RESERVADO - RODAPE_RESERVADO
     linha_altura = max(24, min(altura_util / linhas_por_coluna, 42))
-    caixa = max(14, min(20, linha_altura - 8))
+    # Quadrado maior = mais fácil de o mecânico marcar dentro e muito mais
+    # fácil de a foto distinguir marcado de vazio (26 unidades ≈ 5,5mm no A4)
+    caixa = max(16, min(26, linha_altura - 10))
 
     layout = []
     for i in range(quantidade_itens):

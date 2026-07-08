@@ -3,21 +3,22 @@ Processamento da foto da ficha com OpenCV.
 
 Etapas:
   1. Carrega a foto enviada pelo celular.
-  2. Localiza o contorno da folha (o maior quadrilátero claro sobre o fundo
-     escuro) e corrige a perspectiva; se não achar um quadrilátero limpo,
-     cai para o retângulo rotacionado do maior contorno (foto mais torta/
-     com dobra) antes de desistir e apenas redimensionar.
+  2. Alinha a folha pelos marcadores ArUco impressos nos 4 cantos (com
+     fallback por contorno para fichas antigas sem marcadores).
   3. Corrige iluminação desigual (sombra de um lado da folha, por exemplo)
      "achatando" o fundo antes de binarizar.
-  4. Para cada quadrado de marcação, mede a fração de pixels escuros (tinta).
-  5. Classifica cada quadrado comparando com a MEDIANA e o desvio robusto
-     (MAD) da própria foto — não com um número fixo. Isso adapta a leitura
-     à iluminação/exposição/nitidez de cada foto específica, em vez de
-     assumir que toda foto tem o mesmo contraste da que foi usada para
-     calibrar um limiar fixo.
-  6. Mede a nitidez da folha alinhada; fotos muito borradas geram aviso de
-     baixa qualidade e todos os itens caem em conferência manual (a leitura
-     automática só é confiável em foco razoável).
+  4. Para CADA quadrado de marcação, primeiro encontra a borda impressa de
+     verdade perto da posição esperada (papel curvado e escala da
+     impressora deslocam alguns pixels mesmo com alinhamento global bom).
+  5. Mede duas coisas no miolo do quadrado: fração de tinta E o tamanho da
+     maior mancha conectada. Marcação de caneta forma UM traço grande;
+     ruído de sombra/textura/JPEG vira pixels espalhados — exigir o traço
+     é o que elimina os falsos positivos em foto real.
+  6. Classificação conservadora: só marca com evidência forte; qualquer
+     dúvida fica DESMARCADA e destacada em amarelo ("conferir") — o
+     sistema nunca marca uma peça sozinho sem certeza.
+  7. Mede a nitidez da folha alinhada; fotos muito borradas desativam a
+     leitura automática (tudo cai em conferência manual).
 
 Nada aqui depende de serviço externo ou IA paga.
 """
@@ -198,79 +199,97 @@ def _binarizar(imagem):
     return binaria, nitidez
 
 
-def _medir_preenchimento(binaria, x, y, w, h):
-    """Fração de pixels de tinta dentro do quadrado, ignorando a borda impressa."""
+def _refinar_posicao_quadrado(binaria, x, y, w, h):
+    """Encontra a borda impressa do quadrado PERTO da posição esperada.
+
+    Mesmo com o alinhamento global perfeito (marcadores nos cantos), papel
+    levemente curvado sobre a mesa e a escala da impressora deslocam cada
+    quadrado alguns pixels. Sem este ajuste, a borda impressa do próprio
+    quadrado "vaza" para dentro da área medida e vira falso positivo — a
+    principal causa de peças não marcadas aparecendo como marcadas em fotos
+    reais.
+
+    Procura, numa janela ao redor da posição esperada, o contorno com
+    caixa envolvente do tamanho aproximado do quadrado impresso, e devolve
+    (x, y, w, h) refinados. Se não encontrar (ex.: rabisco cobrindo a borda
+    toda), devolve a posição original — nesse caso o preenchimento alto
+    já denuncia a marcação de qualquer forma.
+    """
+    altura_img, largura_img = binaria.shape
+    folga = int(max(w, h) * 0.7)
+    x0, y0 = max(0, int(x - folga)), max(0, int(y - folga))
+    x1 = min(largura_img, int(x + w + folga))
+    y1 = min(altura_img, int(y + h + folga))
+    janela = binaria[y0:y1, x0:x1]
+    if janela.size == 0:
+        return int(x), int(y), int(w), int(h)
+
+    contornos, _ = cv2.findContours(janela, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    melhor, melhor_erro = None, None
+    for contorno in contornos:
+        bx, by, bw, bh = cv2.boundingRect(contorno)
+        if not (0.6 * w <= bw <= 1.5 * w and 0.6 * h <= bh <= 1.5 * h):
+            continue
+        erro = (abs((x0 + bx) - x) + abs((y0 + by) - y)
+                + abs(bw - w) + abs(bh - h))
+        if melhor_erro is None or erro < melhor_erro:
+            melhor, melhor_erro = (x0 + bx, y0 + by, bw, bh), erro
+    return melhor if melhor is not None else (int(x), int(y), int(w), int(h))
+
+
+def _medir_marcacao(binaria, x, y, w, h):
+    """Mede a tinta DENTRO do quadrado. Retorna (preenchimento, maior_traco).
+
+    - preenchimento: fração de pixels de tinta no miolo do quadrado
+      (margem interna de 25% para excluir a borda impressa);
+    - maior_traco: fração ocupada pela MAIOR mancha conectada de tinta.
+
+    A segunda métrica é o que separa marcação real de ruído: um X ou
+    rabisco de caneta forma UM traço grande e conectado; ruído de sombra,
+    textura de papel e serrilhado de compressão JPEG viram pixels
+    espalhados em manchinhas minúsculas. Exigir um traço grande elimina
+    quase todos os falsos positivos que a fração de pixels sozinha deixa
+    passar.
+    """
     altura_img, largura_img = binaria.shape
     x0, y0 = max(0, int(x)), max(0, int(y))
     x1, y1 = min(largura_img, int(x + w)), min(altura_img, int(y + h))
     if x1 <= x0 or y1 <= y0:
-        return 0.0
-    # margem interna de 25% para não contar a borda impressa do quadrado
-    # (quadrados pequenos + leve desalinhamento na foto fazem a própria borda
-    # impressa "vazar" pixels escuros perto da margem, se ela for pequena demais)
+        return 0.0, 0.0
     mx, my = int((x1 - x0) * 0.25), int((y1 - y0) * 0.25)
     recorte = binaria[y0 + my:y1 - my, x0 + mx:x1 - mx]
     if recorte.size == 0:
-        return 0.0
-    return float(np.count_nonzero(recorte)) / recorte.size
+        return 0.0, 0.0
+    preenchimento = float(np.count_nonzero(recorte)) / recorte.size
+
+    quantidade, _, stats, _ = cv2.connectedComponentsWithStats(recorte, connectivity=8)
+    maior_area = 0
+    for i in range(1, quantidade):  # 0 é o fundo
+        maior_area = max(maior_area, int(stats[i, cv2.CC_STAT_AREA]))
+    return preenchimento, float(maior_area) / recorte.size
 
 
-def _classificar_marcacoes(valores):
-    """Decide marcado/vazio/incerto comparando cada quadrado com a MEDIANA e
-    o desvio robusto (MAD) da própria foto, em vez de um limiar fixo global.
+def _classificar_marcacao(preenchimento, maior_traco):
+    """Classifica UM quadrado por evidência absoluta, sem pré-marcar dúvida.
 
-    Por quê: cada foto tem sua própria exposição, sombra e nitidez. Um
-    quadrado com 15% de preenchimento pode ser "claramente marcado" numa
-    foto bem exposta e "ruído de fundo" noutra mais escura. Comparar cada
-    quadrado com a distribuição da MESMA foto se adapta a isso.
+    Regra de ouro (pedida explicitamente pelo usuário depois dos falsos
+    positivos em foto real): NUNCA marcar um item sem evidência forte.
+      - marcado ("ok"): tem tinta suficiente E ela forma um traço grande
+        conectado (assinatura de caneta, não de ruído);
+      - "conferir": tem alguma tinta acima do nível de ruído, mas sem a
+        assinatura de traço — fica DESMARCADO e destacado em amarelo para
+        o usuário decidir;
+      - vazio ("ok"): abaixo do nível de ruído.
 
-    Ainda assim, mantém dois pisos absolutos (config.DETECCAO_LIMIAR_MARCADO
-    e DETECCAO_LIMIAR_VAZIO) como salvaguarda: numa folha totalmente em
-    branco (nada marcado), a mediana/MAD sozinhas poderiam "inventar" uma
-    separação em puro ruído — os pisos evitam falso-positivo nesse caso.
-
-    Com poucos quadrados (fichas curtas, tipo Diferencial com 3-5 peças) a
-    mediana/MAD de uma amostra tão pequena não é confiável — nesse caso a
-    comparação relativa é desligada e sobra só o piso/teto absolutos.
-
-    Retorna (lista_status, lista_marcado, qualidade_baixa: bool) onde status
-    é "ok" (confiável) ou "conferir" (zona cinzenta / ambíguo).
+    Retorna (marcado: bool, status: str).
     """
-    valores = np.asarray(valores, dtype=float)
-    amostra_suficiente = len(valores) >= config.DETECCAO_MINIMO_ITENS_PARA_COMPARACAO
-
-    if amostra_suficiente:
-        mediana = float(np.median(valores))
-        mad = float(np.median(np.abs(valores - mediana))) * 1.4826  # ~desvio padrão robusto
-        margem_relativa = max(config.DETECCAO_MAD_MULTIPLICADOR * mad, config.DETECCAO_MARGEM_MINIMA)
-        limiar_relativo = mediana + margem_relativa
-    else:
-        mad = 0.0
-        limiar_relativo = config.DETECCAO_LIMIAR_MARCADO  # sem base pra comparar: só o piso absoluto vale
-    # Só é "marcado com confiança" quando SE DESTACA desta foto em particular
-    # (sinal relativo) E passa do piso absoluto (sinal independente da foto).
-    piso_confiavel_marcado = max(config.DETECCAO_LIMIAR_MARCADO, limiar_relativo)
-
-    marcados, status = [], []
-    for valor in valores:
-        valor = float(valor)  # tira do numpy antes de guardar (senão não serializa em JSON)
-        if valor <= config.DETECCAO_LIMIAR_VAZIO:
-            marcados.append(False)
-            status.append("ok")
-        elif valor >= piso_confiavel_marcado:
-            marcados.append(True)
-            status.append("ok")
-        else:
-            # zona cinzenta: pré-marca se ao menos se destacar da própria
-            # foto, mas sempre pede conferência humana
-            marcados.append(bool(valor >= limiar_relativo))
-            status.append("conferir")
-
-    # Se a foto inteira tem pouquíssima variação entre quadrados, não dá pra
-    # confiar em nenhuma marca (provável foto ruim ou ninguém marcou nada
-    # visível) — melhor avisar do que arriscar.
-    qualidade_baixa = bool(mad < 0.01 and (valores.max() - valores.min()) < config.DETECCAO_MARGEM_MINIMA)
-    return status, marcados, qualidade_baixa
+    if (preenchimento >= config.DETECCAO_LIMIAR_MARCADO
+            and maior_traco >= config.DETECCAO_LIMIAR_TRACO):
+        return True, "ok"
+    if (preenchimento >= config.DETECCAO_LIMIAR_SUSPEITA
+            or maior_traco >= config.DETECCAO_LIMIAR_TRACO * 0.6):
+        return False, "conferir"
+    return False, "ok"
 
 
 def processar_foto(caminho_foto, ficha: dict):
@@ -312,19 +331,28 @@ def processar_foto(caminho_foto, ficha: dict):
     itens_ficha = ficha.get("itens", [])
     indices_calibrados = [i for i, item in enumerate(itens_ficha) if item.get("x") is not None]
 
-    valores = {}
+    # Para cada quadrado: 1) acha a borda impressa DE VERDADE perto da posição
+    # esperada (papel curvado/escala de impressora deslocam alguns pixels);
+    # 2) mede tinta e maior traço no miolo; 3) classifica por evidência
+    # absoluta — dúvida fica DESMARCADA e sinalizada, nunca pré-marcada.
+    medidas = {}
     if calibrada:
         for i in indices_calibrados:
             item = itens_ficha[i]
-            valores[i] = _medir_preenchimento(binaria, item["x"], item["y"], item["w"], item["h"])
+            qx, qy, qw, qh = _refinar_posicao_quadrado(
+                binaria, item["x"], item["y"], item["w"], item["h"])
+            preenchimento, maior_traco = _medir_marcacao(binaria, qx, qy, qw, qh)
+            marcado, status = _classificar_marcacao(preenchimento, maior_traco)
+            medidas[i] = {
+                "caixa": (qx, qy, qw, qh),
+                "preenchimento": preenchimento,
+                "maior_traco": maior_traco,
+                "marcado": marcado,
+                "status": status,
+            }
 
-    qualidade_baixa = False
-    status_por_indice, marcado_por_indice = {}, {}
-    if valores:
-        status_lista, marcado_lista, qualidade_baixa = _classificar_marcacoes(list(valores.values()))
-        for i, status, marcado in zip(valores.keys(), status_lista, marcado_lista):
-            status_por_indice[i] = "conferir" if qualidade_baixa else status
-            marcado_por_indice[i] = marcado
+    itens_conferir = sum(1 for m in medidas.values() if m["status"] == "conferir")
+    qualidade_baixa = bool(medidas) and itens_conferir > max(3, len(medidas) * 0.3)
 
     visual = alinhada.copy()
     itens_resultado = []
@@ -339,15 +367,15 @@ def processar_foto(caminho_foto, ficha: dict):
             "confianca": None,
             "status": "manual",  # manual | ok | conferir
         }
-        if i in valores:
-            resultado["confianca"] = round(valores[i], 3)
-            resultado["marcado"] = marcado_por_indice[i]
-            resultado["status"] = status_por_indice[i]
+        if i in medidas:
+            medida = medidas[i]
+            resultado["confianca"] = round(medida["preenchimento"], 3)
+            resultado["marcado"] = medida["marcado"]
+            resultado["status"] = medida["status"]
             cor = (0, 170, 0) if resultado["status"] == "ok" and resultado["marcado"] else \
                   (0, 180, 255) if resultado["status"] == "conferir" else (160, 160, 160)
-            cv2.rectangle(visual, (int(item["x"]), int(item["y"])),
-                          (int(item["x"] + item["w"]), int(item["y"] + item["h"])),
-                          cor, 3)
+            qx, qy, qw, qh = medida["caixa"]
+            cv2.rectangle(visual, (qx, qy), (qx + qw, qy + qh), cor, 3)
         itens_resultado.append(resultado)
 
     nome_arquivo = f"processada_{int(time.time())}.jpg"

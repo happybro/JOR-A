@@ -89,6 +89,37 @@ reflexo de luz em cima), o sistema cai para o método antigo (contorno) como
 reserva, avisando na tela que a leitura pode ser menos precisa — nunca
 finge confiança que não tem.
 
+**Atualização — leitura por quadrado à prova de mundo real:** mesmo com os
+marcadores, a foto real seguinte (ficha impressa de verdade) ainda mostrou
+falsos positivos. Causa: papel levemente curvado na mesa + escala da
+impressora deslocam cada quadrado alguns milímetros em relação ao
+alinhamento global — a borda impressa do próprio quadrado "vazava" para
+dentro da área medida e virava tinta falsa. Três mudanças estruturais:
+
+1. **Snap local por quadrado**: antes de medir, o sistema encontra a borda
+   impressa DE VERDADE de cada quadrado perto da posição esperada e mede
+   dentro do quadrado encontrado — imune a papel ondulado e margem de
+   impressora.
+2. **Detecção por traço, não por pixels soltos**: além da fração de tinta,
+   mede o tamanho da maior mancha conectada. Um X ou rabisco de caneta
+   forma UM traço grande; ruído de sombra/textura/compressão JPEG vira
+   pixels espalhados. Exigir o traço elimina os falsos positivos.
+3. **Nunca pré-marcar dúvida**: a regra antiga pré-marcava itens de "zona
+   cinzenta" (com aviso amarelo) — era justamente o que gerava peças
+   marcadas sem estar. Agora dúvida fica DESMARCADA + amarelo; o sistema
+   só marca sozinho com evidência forte.
+
+Além disso, os quadrados da ficha impressa ficaram maiores (≈5,5mm), mais
+fáceis de marcar e de ler.
+
+Bateria de validação (todos com mesa de madeira, luz de lâmpada em
+gradiente, perspectiva real de câmera E papel ondulado): um único rabisco
+de preenchimento (o caso da foto real), seis X de caneta, folha em branco,
+mistura X + rabisco, curvatura extrema, JPEG qualidade 45 (recompressão de
+WhatsApp) e lápis fraco — **zero falsos positivos e zero peças perdidas em
+todos**. Confirmado também pela interface real: 1 de 41 marcado na tela de
+conferência para a foto com um único rabisco.
+
 ## 3. Arquitetura
 
 - **Flask** em porta própria (5055), acessível pelo celular na rede local.
