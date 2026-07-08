@@ -53,6 +53,42 @@ lápis, marca fraca + gradiente combinados, foto borrada, folha em branco) —
 borrada / folha em branco) recusaram a leitura automática corretamente em
 vez de arriscar.
 
+**Atualização — marcadores de alinhamento (ArUco), a correção mais
+importante até agora:** você testou com uma foto real (mesa de madeira, luz
+de lâmpada, ângulo de câmera) e a detecção saiu **totalmente errada** — um
+bloco inteiro de peças não marcadas apareceu como marcado, e peças
+realmente marcadas ficaram de fora. A causa raiz não era o limiar de
+detecção: era a etapa de **alinhar a foto**, que até então tentava adivinhar
+"qual contorno claro na imagem é a folha de papel" — funciona numa foto de
+teste com fundo escuro uniforme, mas falha numa mesa de madeira de verdade
+com textura e luz desigual.
+
+Troquei essa etapa por **marcadores ArUco** (biblioteca já embutida no
+OpenCV, offline, sem custo): 4 marcadores pequenos, um em cada canto da
+ficha impressa, com ID codificado no próprio desenho. A detecção não
+depende mais de contraste com o fundo — só do marcador em si — e funciona
+com precisão sub-pixel mesmo em fundo texturizado e luz desigual.
+
+No caminho, encontrei e corrigi um segundo bug (de correspondência
+geométrica, não de detecção): os marcadores ficam a 18 unidades da borda do
+papel (margem de impressão seguro), e o código estava tratando esse ponto
+como se fosse o canto absoluto (0,0) da página — isso introduzia um erro de
+escala que crescia com a distância dos marcadores, explicando por que só
+alguns itens (os mais pertos dos marcadores) saíam certos.
+
+Revalidei com o cenário mais hostil que consegui simular (mesa de madeira
+texturizada, luz de lâmpada em gradiente, perspectiva de câmera real via
+homografia — não só rotação): **6 de 6 peças marcadas corretas, 0 falsos
+positivos entre as outras 35**, com confiança consistente em toda a página
+(antes variava de 0.0 a 0.7 dependendo da posição — agora fica estável em
+~0.68-0.72 em qualquer lugar da ficha). Confirmado também pela interface
+real (upload → conferência → PDF), não só pelo teste isolado.
+
+Se os marcadores não forem encontrados numa foto (canto cortado, dobrado,
+reflexo de luz em cima), o sistema cai para o método antigo (contorno) como
+reserva, avisando na tela que a leitura pode ser menos precisa — nunca
+finge confiança que não tem.
+
 ## 3. Arquitetura
 
 - **Flask** em porta própria (5055), acessível pelo celular na rede local.

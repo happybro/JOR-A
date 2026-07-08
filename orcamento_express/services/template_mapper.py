@@ -36,7 +36,7 @@ log = logging.getLogger("orcamento_express.templates")
 MARGEM = 40
 GUTTER = 24
 TOPO_RESERVADO = 300    # espaço para cabeçalho (OS, cliente, placa, veículo...)
-RODAPE_RESERVADO = 90   # espaço para assinatura/rodapé
+RODAPE_RESERVADO = 150  # espaço para assinatura/rodapé + marcadores de alinhamento
 
 
 def caminho_ficha(tipo: str) -> Path:

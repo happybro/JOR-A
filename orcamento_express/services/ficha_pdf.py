@@ -12,18 +12,39 @@ O espaço de referência da ficha (`ref_largura` x `ref_altura`) é
 proporcional ao A4 (1000:1414 ≈ 210:297mm), então a conversão para pontos
 do PDF é uma escala simples, sem distorção.
 """
+import io
 import logging
 import time
 from pathlib import Path
 
+import cv2
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 import config
+from services import marcadores_aruco
 
 log = logging.getLogger("orcamento_express.ficha_pdf")
 
 LARGURA_A4, ALTURA_A4 = A4
+
+
+def _imagem_marcador_para_reportlab(id_marcador):
+    """Gera o bitmap do marcador ArUco e devolve como ImageReader (PNG em memória)."""
+    bitmap = marcadores_aruco.gerar_imagem_marcador(id_marcador)
+    ok, codificado = cv2.imencode(".png", bitmap)
+    if not ok:
+        raise RuntimeError(f"Falha ao gerar o marcador ArUco {id_marcador}")
+    return ImageReader(io.BytesIO(codificado.tobytes()))
+
+
+def _desenhar_marcadores(c, ref_largura, ref_altura):
+    """Desenha os 4 marcadores de alinhamento nos cantos da ficha."""
+    escala = LARGURA_A4 / ref_largura
+    for id_marcador, (x, y, w, h) in marcadores_aruco.posicoes_referencia(ref_largura, ref_altura).items():
+        px, py, pw, ph = _conv(x, y, w, h, ref_largura, ref_altura)
+        c.drawImage(_imagem_marcador_para_reportlab(id_marcador), px, py, pw, ph)
 
 
 def _conv(x, y, w, h, ref_largura, ref_altura):
@@ -54,6 +75,9 @@ def gerar_ficha_impressao(ficha: dict, dados_os: dict) -> str:
 
     def y_pdf(y_ref):
         return ALTURA_A4 - y_ref * escala
+
+    # --- Marcadores de alinhamento (cantos) ---
+    _desenhar_marcadores(c, ref_largura, ref_altura)
 
     # --- Cabeçalho ---
     c.setFont("Helvetica-Bold", 13)
@@ -108,15 +132,16 @@ def gerar_ficha_impressao(ficha: dict, dados_os: dict) -> str:
             texto = base.rstrip() + "…"
         c.drawString(texto_x, texto_y, texto)
 
-    # --- Rodapé ---
+    # --- Rodapé --- (fica todo ACIMA da faixa ocupada pelos marcadores
+    # inferiores, com folga — ver services/template_mapper.RODAPE_RESERVADO)
     c.setFont("Helvetica", 8)
-    c.line(40 * escala, y_pdf(ref_altura - 60), (ref_largura - 40) * escala, y_pdf(ref_altura - 60))
+    c.line(40 * escala, y_pdf(ref_altura - 140), (ref_largura - 40) * escala, y_pdf(ref_altura - 140))
     responsavel = config.OE_RESPONSAVEL_COMPRAS or "___________________________"
     telefone = f" - {config.OE_TELEFONE_COMPRAS}" if config.OE_TELEFONE_COMPRAS else ""
-    c.drawString(40 * escala, y_pdf(ref_altura - 40), f"* {responsavel}{telefone}")
-    c.drawString(40 * escala, y_pdf(ref_altura - 25), config.OE_DEPARTAMENTO_COMPRAS)
-    c.drawRightString((ref_largura - 40) * escala, y_pdf(ref_altura - 25),
-                      "Mecânico responsável: _______________________")
+    c.drawString(40 * escala, y_pdf(ref_altura - 122), f"* {responsavel}{telefone}")
+    c.drawString(40 * escala, y_pdf(ref_altura - 105), config.OE_DEPARTAMENTO_COMPRAS)
+    c.drawRightString((ref_largura - 40) * escala, y_pdf(ref_altura - 105),
+                      "Mecânico responsável: _______________")
 
     c.showPage()
     c.save()

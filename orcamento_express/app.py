@@ -208,12 +208,15 @@ def criar_app():
         rascunho["itens"] = resultado["itens"]
         rascunho["imagem_processada"] = resultado["imagem_processada"]
         rascunho["folha_detectada"] = resultado["folha_detectada"]
+        rascunho["alinhamento_metodo"] = resultado["alinhamento_metodo"]
+        rascunho["alinhamento_impreciso"] = resultado["alinhamento_impreciso"]
         rascunho["ficha_calibrada"] = resultado["ficha_calibrada"]
         rascunho["foto_borrada"] = resultado["foto_borrada"]
         rascunho["qualidade_baixa"] = resultado["qualidade_baixa"]
         salvar_rascunho(rascunho)
         return jsonify({"ok": True, "proxima": url_for("conferencia"),
                         "folha_detectada": resultado["folha_detectada"],
+                        "alinhamento_metodo": resultado["alinhamento_metodo"],
                         "ficha_calibrada": resultado["ficha_calibrada"],
                         "foto_borrada": resultado["foto_borrada"],
                         "qualidade_baixa": resultado["qualidade_baixa"]})

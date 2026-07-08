@@ -40,6 +40,17 @@ Se a oficina preferir usar uma ficha própria fora do sistema, a calibração
 manual (clicar nos quadrados numa foto) continua disponível em
 Configurações → Calibrar manualmente.
 
+### Marcadores nos 4 cantos — não corte nem cubra
+
+A ficha impressa tem um pequeno quadrado preto/branco em cada canto
+(marcador ArUco). É assim que o sistema encontra a folha na foto com
+precisão, mesmo em cima de mesa de madeira, luz de lâmpada ou foto em
+ângulo — muito mais confiável que tentar adivinhar "qual é o contorno da
+folha" numa foto real. **Ao imprimir e fotografar, garanta que os 4 cantos
+apareçam inteiros na foto** (sem cortar, dobrar ou tampar com o dedo). Se
+algum marcador não for encontrado, o sistema avisa na tela de conferência
+e usa um método reserva (menos preciso).
+
 ## Instalação
 
 Requisitos: Python 3.10+ no computador da oficina (Windows).

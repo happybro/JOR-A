@@ -29,6 +29,7 @@ import cv2
 import numpy as np
 
 import config
+from services import marcadores_aruco
 
 log = logging.getLogger("orcamento_express.imagem")
 
@@ -131,18 +132,40 @@ def _encontrar_folha(imagem):
 def alinhar_folha(imagem, largura_ref, altura_ref):
     """Corrige perspectiva e devolve a folha alinhada no tamanho de referência.
 
-    Se não encontrar a folha, apenas redimensiona (com aviso de baixa confiança).
-    Retorna (imagem_alinhada, folha_detectada: bool).
+    Tenta primeiro os marcadores ArUco impressos nos 4 cantos da ficha —
+    muito mais confiáveis que adivinhar "qual contorno é a folha" numa foto
+    real (mesa de madeira, luz de lâmpada, sombra do celular etc. confundem
+    a detecção por contorno). Só cai para o contorno se os marcadores não
+    forem encontrados (ex.: ficha impressa antes dessa versão, ou canto
+    cortado/dobrado na foto) e, na ausência de qualquer um dos dois, apenas
+    redimensiona sem corrigir perspectiva.
+
+    Retorna (imagem_alinhada, metodo) onde metodo é "marcadores", "contorno"
+    ou "nenhum" — usado para decidir se a leitura automática é confiável.
     """
-    cantos = _encontrar_folha(imagem)
-    destino = np.array([[0, 0], [largura_ref - 1, 0],
-                        [largura_ref - 1, altura_ref - 1], [0, altura_ref - 1]],
-                       dtype="float32")
+    destino_pagina = np.array([[0, 0], [largura_ref - 1, 0],
+                               [largura_ref - 1, altura_ref - 1], [0, altura_ref - 1]],
+                              dtype="float32")
+
+    cantos = marcadores_aruco.detectar_cantos_da_folha(imagem)
+    if cantos is not None:
+        metodo = "marcadores"
+        # os marcadores ficam ENTRE a borda da página e o miolo (margem de
+        # impressão) — o destino tem que ser o ponto de referência de CADA
+        # marcador, não o canto (0,0) da página, senão o alinhamento fica
+        # com um erro de escala que cresce ao longe dos marcadores.
+        destino = marcadores_aruco.pontos_destino_referencia(largura_ref, altura_ref)
+    else:
+        cantos = _encontrar_folha(imagem)
+        metodo = "contorno"
+        destino = destino_pagina
+
     if cantos is not None:
         matriz = cv2.getPerspectiveTransform(cantos, destino)
-        return cv2.warpPerspective(imagem, matriz, (largura_ref, altura_ref)), True
-    log.warning("Folha não detectada na foto; usando redimensionamento simples.")
-    return cv2.resize(imagem, (largura_ref, altura_ref)), False
+        return cv2.warpPerspective(imagem, matriz, (largura_ref, altura_ref)), metodo
+    log.warning("Folha não detectada na foto (nem marcadores nem contorno); "
+               "usando redimensionamento simples.")
+    return cv2.resize(imagem, (largura_ref, altura_ref)), "nenhum"
 
 
 def _medir_nitidez(cinza):
@@ -257,6 +280,9 @@ def processar_foto(caminho_foto, ficha: dict):
       - itens: lista com {indice, peca, grupo, marcado, confianca, status}
       - imagem_processada: nome do arquivo salvo em PASTA_PROCESSADAS
       - folha_detectada: bool
+      - alinhamento_metodo: "marcadores" | "contorno" | "nenhum"
+      - alinhamento_impreciso: bool (achou a folha, mas sem os marcadores —
+        menos confiável que alinhamento por marcadores)
       - ficha_calibrada: bool
       - foto_borrada: bool (nitidez abaixo do mínimo confiável)
       - qualidade_baixa: bool (não deu para separar marcado/vazio com confiança)
@@ -272,11 +298,17 @@ def processar_foto(caminho_foto, ficha: dict):
 
     largura_ref = int(ficha.get("ref_largura", 1000))
     altura_ref = int(ficha.get("ref_altura", 1414))
-    alinhada, folha_detectada = alinhar_folha(imagem, largura_ref, altura_ref)
+    alinhada, alinhamento_metodo = alinhar_folha(imagem, largura_ref, altura_ref)
+    folha_detectada = alinhamento_metodo != "nenhum"
+    alinhamento_impreciso = alinhamento_metodo == "contorno"
     binaria, nitidez = _binarizar(alinhada)
     foto_borrada = nitidez < config.DETECCAO_NITIDEZ_MINIMA
 
-    calibrada = bool(ficha.get("calibrada")) and not foto_borrada
+    # Sem NENHUMA correção de perspectiva (nem marcadores, nem contorno), as
+    # coordenadas dos quadrados não têm como bater com a foto — não vale a
+    # pena tentar medir preenchimento, cairia tudo em conferência manual.
+    calibrada = (bool(ficha.get("calibrada")) and not foto_borrada
+                and alinhamento_metodo != "nenhum")
     itens_ficha = ficha.get("itens", [])
     indices_calibrados = [i for i, item in enumerate(itens_ficha) if item.get("x") is not None]
 
@@ -321,14 +353,16 @@ def processar_foto(caminho_foto, ficha: dict):
     nome_arquivo = f"processada_{int(time.time())}.jpg"
     destino = Path(config.PASTA_PROCESSADAS) / nome_arquivo
     salvar_imagem(destino, visual, qualidade_jpeg=82)
-    log.info("Foto processada: %s | folha_detectada=%s | calibrada=%s | "
+    log.info("Foto processada: %s | alinhamento=%s | calibrada=%s | "
              "nitidez=%.1f | borrada=%s | qualidade_baixa=%s",
-             nome_arquivo, folha_detectada, calibrada, nitidez, foto_borrada, qualidade_baixa)
+             nome_arquivo, alinhamento_metodo, calibrada, nitidez, foto_borrada, qualidade_baixa)
 
     return {
         "itens": itens_resultado,
         "imagem_processada": nome_arquivo,
         "folha_detectada": folha_detectada,
+        "alinhamento_metodo": alinhamento_metodo,
+        "alinhamento_impreciso": alinhamento_impreciso,
         "ficha_calibrada": calibrada,
         "foto_borrada": foto_borrada,
         "qualidade_baixa": qualidade_baixa,

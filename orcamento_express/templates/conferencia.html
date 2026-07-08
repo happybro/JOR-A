@@ -11,6 +11,15 @@ Itens em amarelo precisam de conferência manual.</div>
 <div class="aviso erro">Esta foto ficou borrada — a leitura automática foi
 desativada para não arriscar erro. Todos os itens estão para marcação manual.
 Se quiser tentar de novo, volte e tire outra foto com mais luz e segurando firme.</div>
+{% elif rascunho.alinhamento_metodo == 'nenhum' %}
+<div class="aviso erro">Não consegui localizar a ficha na foto (nem os
+marcadores dos cantos, nem a borda da folha) — a leitura automática foi
+desativada. Marque manualmente ou tire a foto de novo com a ficha inteira
+visível e bem enquadrada.</div>
+{% elif rascunho.alinhamento_metodo == 'contorno' %}
+<div class="aviso atencao">Não encontrei os marcadores dos 4 cantos nesta
+foto (canto cortado, dobrado ou reflexo de luz?) — usei um método de
+alinhamento reserva, menos preciso. Confira cada item com atenção redobrada.</div>
 {% elif rascunho.qualidade_baixa %}
 <div class="aviso atencao">Não consegui distinguir com confiança o que foi
 marcado nesta foto (pouco contraste entre os quadrados). Confira cada item

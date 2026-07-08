@@ -12,6 +12,10 @@ fdb>=2.0
 
 # Testes
 pytest>=8.0
+# Opcional: só usado por um teste que renderiza o PDF da ficha de volta em
+# imagem pra simular uma "foto" realista (com marcadores ArUco de verdade).
+# Sem isso instalado, esse teste específico é pulado automaticamente.
+# pymupdf>=1.24
 
 # Necessário só para gerar o executável (.exe) no Windows — veja gerar_executavel.bat
 # pyinstaller>=6.0

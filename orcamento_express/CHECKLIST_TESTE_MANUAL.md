@@ -15,14 +15,19 @@ Marque cada item ao validar a instalação na oficina.
       - Número inexistente: mensagem "Não encontrei essa OS no banco."
 - [ ] 5. Escolher o tipo de ficha (ex.: Motor FH D13 Parcial) e continuar.
 - [ ] 6. Na tela de captura, tocar em "Imprimir ficha para o mecânico marcar" —
-      confirma que abre um PDF com cabeçalho da OS e quadrados ao lado de cada peça.
+      confirma que abre um PDF com cabeçalho da OS, quadrados ao lado de cada
+      peça e um marcador quadrado pequeno em cada um dos 4 cantos da folha.
 - [ ] 7. Imprimir essa ficha de verdade, marcar algumas peças com X à caneta.
-- [ ] 8. Tirar foto da ficha marcada pelo celular (folha inteira, boa luz,
-      fundo mais escuro que o papel) e ver a prévia.
+      Garanta que os 4 cantos (com o marcador) fiquem visíveis no papel —
+      não deixe a impressora cortar a margem.
+- [ ] 8. Tirar foto da ficha marcada pelo celular (folha inteira COM os 4
+      cantos visíveis, boa luz, qualquer mesa/fundo) e ver a prévia.
 - [ ] 9. Processar a foto — abre a conferência sem erro, com as peças marcadas
-      já selecionadas (verde) e o restante desmarcado.
+      já selecionadas (verde) e o restante desmarcado. Se aparecer o aviso
+      "não encontrei os marcadores dos 4 cantos", tire a foto de novo
+      garantindo que os cantos apareçam inteiros.
       Testar também com uma foto ruim de propósito (tremida/torta): o sistema
-      deve avisar ("Conferir este item manualmente"), não travar.
+      deve avisar ("Conferir este item manualmente" ou "foto borrada"), não travar.
 - [ ] 10. Conferir itens: marcar/desmarcar, mudar quantidade, editar nome,
       adicionar peça manual, escolher "Cliente traz", escrever observação.
 - [ ] 11. Gerar PDF — abrir o arquivo, conferir dados, imprimir,
