@@ -37,6 +37,39 @@ class ErroProcessamentoImagem(Exception):
     """Erro amigável de processamento (mensagem segura para exibir)."""
 
 
+def ler_imagem(caminho):
+    """Lê uma imagem do disco de forma segura para caminhos com acentos.
+
+    cv2.imread() usa fopen() internamente e falha silenciosamente (retorna
+    None) em caminhos com acentuação no Windows — por exemplo
+    "C:\\Users\\João\\..." ou uma pasta "Área de Trabalho". Isso é comum no
+    Brasil e é uma causa frequente do erro "não consegui ler a imagem"
+    mesmo com um arquivo válido. np.fromfile + cv2.imdecode não tem esse
+    problema porque abre o arquivo pelo Python (que lida bem com Unicode).
+    """
+    caminho = Path(caminho)
+    try:
+        dados = np.fromfile(str(caminho), dtype=np.uint8)
+    except OSError:
+        return None
+    if dados.size == 0:
+        return None
+    return cv2.imdecode(dados, cv2.IMREAD_COLOR)
+
+
+def salvar_imagem(caminho, imagem, qualidade_jpeg=90):
+    """Salva uma imagem no disco de forma segura para caminhos com acentos
+    (mesmo motivo do ler_imagem: cv2.imwrite falha silenciosamente em
+    caminhos com Unicode no Windows)."""
+    caminho = Path(caminho)
+    extensao = caminho.suffix or ".jpg"
+    parametros = [cv2.IMWRITE_JPEG_QUALITY, qualidade_jpeg] if extensao.lower() in (".jpg", ".jpeg") else []
+    ok, codificada = cv2.imencode(extensao, imagem, parametros)
+    if not ok:
+        raise ErroProcessamentoImagem("Não consegui salvar a imagem processada.")
+    codificada.tofile(str(caminho))
+
+
 def _ordenar_cantos(pontos):
     """Ordena 4 pontos como: sup-esq, sup-dir, inf-dir, inf-esq."""
     pontos = pontos.reshape(4, 2).astype("float32")
@@ -228,10 +261,14 @@ def processar_foto(caminho_foto, ficha: dict):
       - foto_borrada: bool (nitidez abaixo do mínimo confiável)
       - qualidade_baixa: bool (não deu para separar marcado/vazio com confiança)
     """
-    imagem = cv2.imread(str(caminho_foto))
+    imagem = ler_imagem(caminho_foto)
     if imagem is None:
+        tamanho = Path(caminho_foto).stat().st_size if Path(caminho_foto).exists() else -1
+        log.error("Falha ao decodificar imagem: %s (tamanho=%d bytes)", caminho_foto, tamanho)
         raise ErroProcessamentoImagem(
-            "Não consegui ler a imagem enviada. Envie uma foto JPG ou PNG válida.")
+            "Não consegui ler a imagem enviada. Envie uma foto JPG ou PNG válida "
+            "(fotos em formato HEIC do iPhone não são suportadas — configure o "
+            "celular para salvar fotos como \"Mais compatível\"/JPG).")
 
     largura_ref = int(ficha.get("ref_largura", 1000))
     altura_ref = int(ficha.get("ref_altura", 1414))
@@ -283,7 +320,7 @@ def processar_foto(caminho_foto, ficha: dict):
 
     nome_arquivo = f"processada_{int(time.time())}.jpg"
     destino = Path(config.PASTA_PROCESSADAS) / nome_arquivo
-    cv2.imwrite(str(destino), visual, [cv2.IMWRITE_JPEG_QUALITY, 82])
+    salvar_imagem(destino, visual, qualidade_jpeg=82)
     log.info("Foto processada: %s | folha_detectada=%s | calibrada=%s | "
              "nitidez=%.1f | borrada=%s | qualidade_baixa=%s",
              nome_arquivo, folha_detectada, calibrada, nitidez, foto_borrada, qualidade_baixa)

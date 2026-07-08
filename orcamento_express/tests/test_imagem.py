@@ -31,6 +31,27 @@ def test_imagem_invalida_nao_quebra(tmp_path):
         image_processor.processar_foto(caminho, ficha)
 
 
+def test_ler_e_salvar_imagem_em_pasta_com_acentos(tmp_path):
+    """cv2.imread/imwrite falham silenciosamente em caminhos com acentos no
+    Windows (ex.: "C:\\Users\\João\\Área de Trabalho"). ler_imagem/salvar_imagem
+    usam np.fromfile/tofile por baixo, que não têm esse problema."""
+    pasta = tmp_path / "Área de Trabalho" / "João"
+    pasta.mkdir(parents=True)
+    imagem = np.full((50, 50, 3), 128, dtype=np.uint8)
+
+    destino = pasta / "foto_ção.jpg"
+    image_processor.salvar_imagem(destino, imagem)
+    assert destino.exists() and destino.stat().st_size > 0
+
+    lida = image_processor.ler_imagem(destino)
+    assert lida is not None
+    assert lida.shape[:2] == (50, 50)
+
+
+def test_ler_imagem_arquivo_inexistente_retorna_none(tmp_path):
+    assert image_processor.ler_imagem(tmp_path / "nao_existe.jpg") is None
+
+
 def test_ficha_real_usa_layout_automatico(tmp_path):
     """A ficha real (gerada da planilha) já vem com coordenadas automáticas —
     não depende de calibração manual para funcionar."""

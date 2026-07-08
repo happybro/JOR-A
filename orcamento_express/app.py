@@ -286,14 +286,13 @@ def criar_app():
         destino = Path(config.PASTA_UPLOADS) / f"calibracao_{uuid.uuid4().hex}{Path(arquivo.filename).suffix.lower()}"
         arquivo.save(destino)
         try:
-            import cv2
-            imagem = cv2.imread(str(destino))
+            imagem = image_processor.ler_imagem(destino)
             if imagem is None:
                 raise image_processor.ErroProcessamentoImagem("Imagem inválida.")
             alinhada, _ = image_processor.alinhar_folha(
                 imagem, ficha["ref_largura"], ficha["ref_altura"])
             nome = f"calibracao_{tipo}.jpg"
-            cv2.imwrite(str(Path(config.PASTA_PROCESSADAS) / nome), alinhada)
+            image_processor.salvar_imagem(Path(config.PASTA_PROCESSADAS) / nome, alinhada)
         except image_processor.ErroProcessamentoImagem as exc:
             return jsonify({"ok": False, "erro": str(exc)}), 400
         return jsonify({"ok": True, "imagem": url_for("servir_processada", nome=nome)})
