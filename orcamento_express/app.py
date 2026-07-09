@@ -213,6 +213,7 @@ def criar_app():
         rascunho["ficha_calibrada"] = resultado["ficha_calibrada"]
         rascunho["foto_borrada"] = resultado["foto_borrada"]
         rascunho["qualidade_baixa"] = resultado["qualidade_baixa"]
+        rascunho["itens_fora_da_foto"] = resultado["itens_fora_da_foto"]
         salvar_rascunho(rascunho)
         return jsonify({"ok": True, "proxima": url_for("conferencia"),
                         "folha_detectada": resultado["folha_detectada"],
@@ -292,7 +293,7 @@ def criar_app():
             imagem = image_processor.ler_imagem(destino)
             if imagem is None:
                 raise image_processor.ErroProcessamentoImagem("Imagem inválida.")
-            alinhada, _ = image_processor.alinhar_folha(
+            alinhada, _, _ = image_processor.alinhar_folha(
                 imagem, ficha["ref_largura"], ficha["ref_altura"])
             nome = f"calibracao_{tipo}.jpg"
             image_processor.salvar_imagem(Path(config.PASTA_PROCESSADAS) / nome, alinhada)

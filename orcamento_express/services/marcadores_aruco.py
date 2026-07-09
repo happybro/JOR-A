@@ -50,27 +50,6 @@ def posicoes_referencia(ref_largura, ref_altura):
     }
 
 
-def pontos_destino_referencia(ref_largura, ref_altura):
-    """Pontos (TL, TR, BR, BL), no espaço de referência, que correspondem ao
-    canto de CADA MARCADOR que fica voltado para fora da página — não ao
-    canto (0,0)/(ref_largura,0)/etc. da própria página!
-
-    Isso importa porque os marcadores ficam a MARGEM unidades para dentro
-    da borda (por causa da margem de impressão), não exatamente no canto.
-    Passar esses pontos (em vez do retângulo cheio 0..ref_largura) como
-    destino do cv2.getPerspectiveTransform é o que faz o alinhamento bater
-    certo — usar (0,0) etc. por engano introduz um erro de escala que cresce
-    à medida que se afasta dos marcadores (efeito visto na prática: itens
-    do meio/fim da lista saindo com a marcação errada).
-    """
-    return np.array([
-        [MARGEM, MARGEM],
-        [ref_largura - MARGEM, MARGEM],
-        [ref_largura - MARGEM, ref_altura - MARGEM],
-        [MARGEM, ref_altura - MARGEM],
-    ], dtype="float32")
-
-
 def gerar_imagem_marcador(id_marcador, tamanho_px=300):
     """Gera o bitmap (numpy, escala de cinza) de um marcador ArUco pra imprimir."""
     return cv2.aruco.generateImageMarker(DICIONARIO, id_marcador, tamanho_px)
@@ -78,44 +57,90 @@ def gerar_imagem_marcador(id_marcador, tamanho_px=300):
 
 def _detector():
     parametros = cv2.aruco.DetectorParameters()
+    # refinamento sub-pixel dos cantos: importante em foto de WhatsApp
+    # (baixa resolução), onde 1 pixel de erro no canto já desloca a página
+    parametros.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
     return cv2.aruco.ArucoDetector(DICIONARIO, parametros)
 
 
-def detectar_cantos_da_folha(imagem_bgr):
-    """Localiza os 4 marcadores na foto e devolve os 4 cantos da folha
-    (ordem TL, TR, BR, BL), ou None se algum marcador não foi encontrado.
-
-    Cada marcador devolve seus PRÓPRIOS 4 cantos (a biblioteca já resolve a
-    orientação certa lendo o padrão do marcador, então corners[0] é sempre
-    o canto superior-esquerdo DAQUELE marcador, não importa a rotação da
-    foto). Como cada marcador foi impresso exatamente no canto da folha,
-    pegamos o canto DELE que corresponde ao canto DA PÁGINA:
-      - marcador superior-esquerdo  -> seu próprio canto superior-esquerdo
-      - marcador superior-direito   -> seu próprio canto superior-direito
-      - marcador inferior-direito   -> seu próprio canto inferior-direito
-      - marcador inferior-esquerdo  -> seu próprio canto inferior-esquerdo
-    """
-    cinza = cv2.cvtColor(imagem_bgr, cv2.COLOR_BGR2GRAY)
+def _detectar_uma_escala(cinza, escala):
+    """Detecta marcadores numa versão redimensionada e devolve os cantos já
+    convertidos de volta para as coordenadas originais."""
+    if escala != 1.0:
+        cinza = cv2.resize(cinza, None, fx=escala, fy=escala, interpolation=cv2.INTER_CUBIC)
     corners, ids, _ = _detector().detectMarkers(cinza)
     if ids is None:
-        return None
-    # ids vem como coluna (N,1) em versões antigas do OpenCV e como vetor
-    # (N,) em versões mais novas (5.x) — achatar cobre os dois casos.
-    ids_achatado = np.asarray(ids).ravel()
-    achados = {int(id_): c[0] for id_, c in zip(ids_achatado, corners)}
+        return {}
+    ids_achatado = np.asarray(ids).ravel()  # coluna (N,1) em cv2 antigo, vetor (N,) no 5.x
+    return {int(id_): c[0] / escala for id_, c in zip(ids_achatado, corners)
+            if int(id_) in (ID_SUP_ESQ, ID_SUP_DIR, ID_INF_DIR, ID_INF_ESQ)}
 
-    # índice do canto DENTRO do próprio marcador (a lib devolve sempre
-    # [TL, TR, BR, BL] do marcador, já resolvendo a rotação da foto) que
-    # corresponde ao canto DA PÁGINA — por coincidência de convenção, é o
-    # mesmo número do ID (0=TL, 1=TR, 2=BR, 3=BL)
-    indice_canto_por_id = {ID_SUP_ESQ: 0, ID_SUP_DIR: 1, ID_INF_DIR: 2, ID_INF_ESQ: 3}
-    if not all(id_ in achados for id_ in indice_canto_por_id):
-        faltando = [id_ for id_ in indice_canto_por_id if id_ not in achados]
+
+def detectar_marcadores(imagem_bgr):
+    """Detecta os marcadores da página e devolve {id: 4 cantos (float32)}.
+
+    Fotos de WhatsApp chegam recomprimidas e pequenas (~720px de largura),
+    onde cada marcador tem ~40px — no limite do detector. Por isso, se
+    algum dos 4 não aparecer na escala original, tenta de novo com a
+    imagem ampliada (2x) e com contraste local reforçado (CLAHE), mesclando
+    apenas os marcadores que faltavam.
+    """
+    cinza = cv2.cvtColor(imagem_bgr, cv2.COLOR_BGR2GRAY)
+    achados = _detectar_uma_escala(cinza, 1.0)
+    if len(achados) < 4:
+        for tentativa in ("2x", "clahe"):
+            if tentativa == "2x":
+                novos = _detectar_uma_escala(cinza, 2.0)
+            else:
+                clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8)).apply(cinza)
+                novos = _detectar_uma_escala(clahe, 2.0)
+            for id_, cantos in novos.items():
+                achados.setdefault(id_, cantos)
+            if len(achados) == 4:
+                break
+    if len(achados) < 4:
+        faltando = sorted(set([ID_SUP_ESQ, ID_SUP_DIR, ID_INF_DIR, ID_INF_ESQ]) - set(achados))
         log.warning("Marcadores ArUco não encontrados: %s (achados: %s)",
-                    faltando, sorted(achados.keys()))
-        return None
+                    faltando, sorted(achados))
+    return achados
 
-    cantos = np.array([
-        achados[id_][indice] for id_, indice in indice_canto_por_id.items()
-    ], dtype="float32")
-    return cantos
+
+def _cantos_impressos_do_marcador(id_marcador, ref_largura, ref_altura):
+    """Cantos (TL, TR, BR, BL) de UM marcador no espaço de referência da
+    ficha — exatamente onde ele foi impresso por services/ficha_pdf.py."""
+    x, y, w, h = posicoes_referencia(ref_largura, ref_altura)[id_marcador]
+    return np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], dtype="float32")
+
+
+def estimar_homografia(imagem_bgr, ref_largura, ref_altura):
+    """Estima a transformação foto→ficha usando TODOS os cantos de TODOS os
+    marcadores encontrados (cada marcador contribui 4 pontos).
+
+    É isso que permite alinhar com precisão mesmo quando só 2 ou 3 dos 4
+    marcadores aparecem (canto cortado na foto, reflexo, resolução baixa do
+    WhatsApp): 2 marcadores = 8 correspondências, 3 = 12 — o suficiente
+    para uma homografia estável, sem precisar cair para o método de
+    contorno (que em foto real já desalinhou e fabricou marcações).
+
+    Retorna (H, quantidade_de_marcadores) ou (None, quantidade).
+    """
+    achados = detectar_marcadores(imagem_bgr)
+    if len(achados) < 2:
+        return None, len(achados)
+
+    pontos_foto, pontos_ficha = [], []
+    for id_, cantos in achados.items():
+        pontos_foto.extend(cantos)
+        pontos_ficha.extend(_cantos_impressos_do_marcador(id_, ref_largura, ref_altura))
+    pontos_foto = np.asarray(pontos_foto, dtype=np.float32)
+    pontos_ficha = np.asarray(pontos_ficha, dtype=np.float32)
+
+    H, mascara = cv2.findHomography(pontos_foto, pontos_ficha, cv2.RANSAC, 8.0)
+    if H is None:
+        return None, len(achados)
+    inliers = int(mascara.sum()) if mascara is not None else 0
+    if inliers < len(pontos_foto) * 0.7:
+        log.warning("Homografia dos marcadores instável (%d/%d inliers) — descartada.",
+                    inliers, len(pontos_foto))
+        return None, len(achados)
+    return H, len(achados)

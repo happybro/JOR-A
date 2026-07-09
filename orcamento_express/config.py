@@ -120,6 +120,21 @@ DETECCAO_LIMIAR_TRACO = float(os.environ.get("OE_LIMIAR_TRACO", "0.10"))
 # Acima disto (mas sem passar nos critérios de marcado), o item vira
 # "conferir" (desmarcado + destaque amarelo); abaixo, é vazio com confiança
 DETECCAO_LIMIAR_SUSPEITA = float(os.environ.get("OE_LIMIAR_SUSPEITA", "0.08"))
+# Assinatura de TINTA DE CANETA (vs. sujeira de oficina): um pixel só conta
+# como tinta se for BEM mais escuro que o papel ao redor (delta de brilho
+# abaixo) ou tiver cor saturada (caneta azul/vermelha). Mancha de graxa/
+# dedo é acinzentada e fraca — fica de fora.
+DETECCAO_DELTA_ESCURO = int(os.environ.get("OE_DELTA_ESCURO", "60"))
+DETECCAO_SATURACAO_TINTA = int(os.environ.get("OE_SATURACAO_TINTA", "80"))
+# O entorno do quadrado (3 lados) precisa ser papel claro para a leitura
+# valer: se a mediana de brilho ao redor ficar abaixo do papel da página
+# menos este delta (fundo/dedo/sombra invadindo), o item cai em conferência
+DETECCAO_DELTA_AMBIENTE = int(os.environ.get("OE_DELTA_AMBIENTE", "60"))
+# Resíduo máximo (px no espaço de referência) entre onde a grade prevê o
+# quadrado e onde ele foi encontrado, para considerá-lo CONFIRMADO: dobra
+# suave de papel fica em ~10-15px; casar com o quadrado do item vizinho
+# (~1 linha, 42px) fica muito acima — 20px separa os dois com folga.
+DETECCAO_RESIDUO_GRADE = float(os.environ.get("OE_RESIDUO_GRADE", "20.0"))
 # Nitidez mínima (variância do Laplaciano) para confiar na leitura automática;
 # abaixo disso, a foto é considerada borrada e cai tudo em conferência manual
 DETECCAO_NITIDEZ_MINIMA = float(os.environ.get("OE_NITIDEZ_MINIMA", "40.0"))

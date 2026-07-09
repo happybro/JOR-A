@@ -79,7 +79,11 @@ def test_processa_ficha_sem_coordenadas_cai_no_modo_manual(tmp_path):
     assert resultado["itens"][0]["status"] == "manual"
 
 
-def test_detecta_marcacao_com_ficha_calibrada(tmp_path):
+def test_alinhamento_por_contorno_nunca_marca_sozinho(tmp_path):
+    """Foto SEM os marcadores dos cantos (ficha antiga/externa): o
+    alinhamento cai no modo contorno, que em foto real já desalinhou e
+    fabricou marcações — por segurança ele NUNCA marca item sozinho.
+    A marcação encontrada vira sugestão amarela desmarcada."""
     caminho_marcada = _foto_ficha_sintetica(tmp_path, marcar=True)
     ficha = {
         "tipo": "teste", "ref_largura": 1000, "ref_altura": 1414, "calibrada": True,
@@ -88,7 +92,11 @@ def test_detecta_marcacao_com_ficha_calibrada(tmp_path):
     }
     resultado = image_processor.processar_foto(caminho_marcada, ficha)
     assert resultado["folha_detectada"] is True
-    assert resultado["itens"][0]["marcado"] is True
+    assert resultado["alinhamento_metodo"] == "contorno"
+    assert resultado["alinhamento_confiavel"] is False
+    # a tinta foi vista, mas vira sugestão (amarelo, DESMARCADA)
+    assert resultado["itens"][0]["marcado"] is False
+    assert resultado["itens"][0]["status"] == "conferir"
 
     caminho_vazia = _foto_ficha_sintetica(tmp_path, marcar=False)
     resultado_vazio = image_processor.processar_foto(caminho_vazia, ficha)
@@ -116,11 +124,24 @@ def test_upload_formato_invalido(cliente_com_rascunho):
 # marca fraca, borrão, folha em branco). Ver services/image_processor.py.
 # ---------------------------------------------------------------------------
 
+def _colar_marcadores(folha, ref_w, ref_h):
+    """Cola os 4 marcadores ArUco nos cantos da folha sintética — como a
+    ficha impressa pelo sistema tem de verdade. Sem eles, o alinhamento
+    cai no modo contorno, que por segurança nunca marca item sozinho."""
+    from services import marcadores_aruco
+    for id_, (x, y, w, h) in marcadores_aruco.posicoes_referencia(ref_w, ref_h).items():
+        bitmap = marcadores_aruco.gerar_imagem_marcador(id_, int(w))
+        folha[int(y):int(y) + int(h), int(x):int(x) + int(w)] = \
+            cv2.cvtColor(bitmap, cv2.COLOR_GRAY2BGR)
+    return folha
+
+
 def _folha_com_marcas(ficha, indices_marcados, intensidade=(0, 0, 0), espessura=3):
     """Monta a folha em branco (impressa pelo próprio sistema) já com X nos
     índices indicados, no espaço de referência da ficha."""
     ref_w, ref_h = ficha["ref_largura"], ficha["ref_altura"]
     folha = np.full((ref_h, ref_w, 3), 255, dtype=np.uint8)
+    _colar_marcadores(folha, ref_w, ref_h)
     for item in ficha["itens"]:
         if item.get("x") is not None:
             cv2.rectangle(folha, (item["x"], item["y"]),
@@ -243,6 +264,8 @@ def test_papel_curvado_nao_gera_falso_positivo(tmp_path):
     ref_w, ref_h = ficha["ref_largura"], ficha["ref_altura"]
     desloc = 6
     folha = np.full((ref_h, ref_w, 3), 255, dtype=np.uint8)
+    _colar_marcadores(folha, ref_w, ref_h)  # marcadores na posição exata;
+    # só os quadrados ficam deslocados (o resíduo que a curvatura causa)
     for item in ficha["itens"]:
         x, y = item["x"] + desloc, item["y"] + desloc
         cv2.rectangle(folha, (x, y), (x + item["w"], y + item["h"]), (0, 0, 0), 2)

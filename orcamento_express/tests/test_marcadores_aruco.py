@@ -33,27 +33,40 @@ def test_marcador_gerado_e_detectado_com_precisao_subpixel():
     assert corners[0][0][0] == pytest.approx((100, 100), abs=3)
 
 
-def test_detectar_cantos_da_folha_sem_marcadores_retorna_none():
-    """Sem nenhum marcador na imagem, não deve inventar cantos."""
+def test_sem_marcadores_nao_inventa_homografia():
+    """Sem nenhum marcador na imagem, não deve inventar alinhamento."""
     imagem_em_branco = np.full((600, 400, 3), 255, dtype=np.uint8)
-    assert marcadores_aruco.detectar_cantos_da_folha(imagem_em_branco) is None
+    H, quantidade = marcadores_aruco.estimar_homografia(imagem_em_branco, 1000, 1414)
+    assert H is None
+    assert quantidade == 0
 
 
-def test_pontos_destino_sao_internos_a_pagina_nao_o_canto_absoluto():
-    """Salvaguarda de regressão direta: os pontos de destino usados no
-    getPerspectiveTransform DEVEM ser os cantos dos próprios marcadores
-    (a MARGEM unidades da borda), nunca (0,0)/(ref_largura, 0)/etc."""
+def _colar_marcador(tela, id_marcador, x, y, tamanho):
+    bitmap = marcadores_aruco.gerar_imagem_marcador(id_marcador, tamanho)
+    tela[y:y + tamanho, x:x + tamanho] = bitmap
+
+
+def test_homografia_com_apenas_2_marcadores():
+    """Cada marcador contribui com seus 4 cantos, então 2 marcadores (8
+    pontos) bastam para estimar a homografia — sem cair para o método de
+    contorno, que em foto real desalinhou e fabricou marcações."""
     ref_w, ref_h = 1000, 1414
-    destino = marcadores_aruco.pontos_destino_referencia(ref_w, ref_h)
-    m = marcadores_aruco.MARGEM
-    assert list(destino[0]) == [m, m]
-    assert list(destino[1]) == [ref_w - m, m]
-    assert list(destino[2]) == [ref_w - m, ref_h - m]
-    assert list(destino[3]) == [m, ref_h - m]
-    # nenhum ponto pode ser o canto absoluto da página (0 ou ref_w/ref_h exatos)
-    for x, y in destino:
-        assert x not in (0, ref_w)
-        assert y not in (0, ref_h)
+    pos = marcadores_aruco.posicoes_referencia(ref_w, ref_h)
+    # monta uma "foto" já no espaço de referência com só 2 marcadores opostos
+    tela = np.full((ref_h, ref_w), 255, dtype=np.uint8)
+    for id_ in (marcadores_aruco.ID_SUP_ESQ, marcadores_aruco.ID_INF_DIR):
+        x, y, w, h = pos[id_]
+        _colar_marcador(tela, id_, int(x), int(y), int(w))
+    imagem = cv2.cvtColor(tela, cv2.COLOR_GRAY2BGR)
+
+    H, quantidade = marcadores_aruco.estimar_homografia(imagem, ref_w, ref_h)
+    assert quantidade == 2
+    assert H is not None
+    # a imagem já está alinhada, então a homografia deve ser ~identidade:
+    # os cantos dos marcadores devem ser mapeados quase neles mesmos
+    origem = np.array([[[float(pos[0][0]), float(pos[0][1])]]], dtype=np.float32)
+    mapeado = cv2.perspectiveTransform(origem, H)[0][0]
+    assert mapeado == pytest.approx((pos[0][0], pos[0][1]), abs=4)
 
 
 @pytest.mark.parametrize("usar_fitz", [True])

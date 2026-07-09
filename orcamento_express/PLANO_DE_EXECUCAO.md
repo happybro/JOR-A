@@ -120,6 +120,45 @@ WhatsApp) e lápis fraco — **zero falsos positivos e zero peças perdidas em
 todos**. Confirmado também pela interface real: 1 de 41 marcado na tela de
 conferência para a foto com um único rabisco.
 
+**Atualização final — calibrado com 6 FOTOS REAIS da oficina (WhatsApp):**
+o usuário enviou um zip com 6 fotos reais de como a folha chega (impressa,
+marcada de caneta azul em 3 peças, fotografada sobre teclado/mesa, segurada
+na mão, recomprimida pelo WhatsApp a ~720px). O diagnóstico nelas guiou a
+última rodada de robustez:
+
+1. **Homografia por todos os cantos de todos os marcadores** (8-16 pontos,
+   RANSAC): em metade das fotos reais, 1 dos 4 marcadores não era detectado
+   (resolução baixa) e o sistema caía no modo contorno — que numa das fotos
+   desalinhou e fabricou 9 marcações. Como cada marcador dá 4 cantos, 2-3
+   marcadores bastam para alinhar com precisão. Também: detecção de
+   marcador em multi-escala (2x + CLAHE) para foto pequena de WhatsApp.
+2. **Máscara de tinta de caneta vs. sujeira de oficina**: pixel só conta
+   como tinta se for BEM mais escuro que o papel local ou tiver cor
+   saturada (caneta azul/vermelha) — mancha acinzentada de graxa/dedo fica
+   fora. Com fechamento morfológico para religar traço fragmentado pela
+   compressão.
+3. **Confirmação física da grade por item**: os 41 quadrados impressos
+   funcionam como fiduciais; um ajuste afim por RANSAC prevê onde cada
+   quadrado deveria estar, e só é "confirmado" o item cujo quadrado foi
+   encontrado a menos de 20px do previsto (dobra suave ≈ 10-15px passa;
+   casamento com o vizinho ≈ 42px é rejeitado). **Item não confirmado
+   nunca é marcado automaticamente** — vira amarelo com aviso.
+4. **Máscara de validade do warp**: região da ficha que ficou fora do
+   enquadramento da foto (o warp preenche com preto) é identificada e
+   nunca lida — antes, o preto virava "tinta".
+5. **Política de confiança**: leitura automática só marca sozinha com
+   alinhamento por 3+ marcadores; com 2 marcadores ou contorno, tudo vira
+   sugestão amarela desmarcada.
+
+Resultado nas 6 fotos reais: **5/6 com leitura automática perfeita (as 3
+peças exatas, zero falsos positivos)**; a 6ª é uma foto onde os quadrados
+de 8 itens estão literalmente fora do enquadramento (papel dobrado na mão
+cortou a coluna esquerda) — impossível ler o que não está na foto; nela o
+sistema marca as peças legíveis, coloca os itens ilegíveis em amarelo e
+avisa na tela. **Zero falsos positivos em 6/6.** As 3 fotos mais
+representativas viraram testes de regressão permanentes
+(tests/dados_reais/).
+
 ## 3. Arquitetura
 
 - **Flask** em porta própria (5055), acessível pelo celular na rede local.
